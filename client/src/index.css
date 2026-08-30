@@ -1,177 +1,78 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-paper: oklch(0.976 0.012 95);
+  --color-paper-deep: oklch(0.927 0.032 92);
+  --color-ink: oklch(0.23 0.018 260);
+  --color-charcoal: oklch(0.23 0.018 260);
+  --color-charcoal-light: oklch(0.30 0.018 260);
+  --color-bronze: oklch(0.49 0.11 85);
+  --color-bronze-light: oklch(0.61 0.12 85);
+  --color-bronze-dark: oklch(0.40 0.09 85);
+  --color-muted-ink: oklch(0.45 0.025 80);
+  --color-muted-paper: oklch(0.64 0.035 82);
+  --color-verified: oklch(0.49 0.11 85);
+  --color-review: oklch(0.62 0.12 73);
+  --color-forged: oklch(0.44 0.14 25);
+  --color-neutral-seal: oklch(0.64 0.035 82);
+  --color-border: oklch(0.86 0.028 90);
+  --font-sans: "Source Sans 3", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Libre Baskerville", Georgia, serif;
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
+  font-family: "Source Sans 3", "Inter", ui-sans-serif, system-ui, sans-serif;
+  color: #2a2c30;
+  background: #faf7f0;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.85 0.005 65);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.85 0.005 65);
-  --secondary: oklch(0.24 0.006 286.033);
-  --secondary-foreground: oklch(0.7 0.005 65);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.488 0.243 264.376);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.85 0.005 65);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.488 0.243 264.376);
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; background: #faf7f0; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, a { transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out), box-shadow 160ms var(--ease-out); }
+button:active, a:active { transform: scale(0.98); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #b08d2e; outline-offset: 3px; }
+
+.font-serif { font-family: "Libre Baskerville", Georgia, serif; }
+.eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.18em; line-height: 1.2; text-transform: uppercase; }
+.text-balance { text-wrap: balance; }
+
+.hero-grid { background-image: linear-gradient(rgba(250,247,240,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(250,247,240,0.05) 1px, transparent 1px); background-size: 42px 42px; }
+.hero-wash { background: radial-gradient(circle at 74% 12%, rgba(176,141,46,0.16), transparent 33%), linear-gradient(135deg, #2a2c30 0%, #3a3d42 100%); }
+.paper-rule { border-color: rgba(42,44,48,0.12); }
+
+.seal { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid currentColor; }
+.seal-verified { color: #8a6d1f; background: rgba(138,109,31,0.12); }
+.seal-review { color: #a66c21; background: rgba(192,138,62,0.14); }
+.seal-forged { color: #a23e3e; background: rgba(162,62,62,0.12); }
+.seal-neutral { color: #817866; background: rgba(156,147,130,0.12); }
+
+.upload-panel { position: relative; }
+.upload-dropzone { min-height: 342px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem; border: 1px dashed rgba(138,109,31,0.48); border-radius: 24px; background: rgba(250,247,240,0.96); transition: background-color 180ms var(--ease-out), border-color 180ms var(--ease-out), transform 180ms var(--ease-out); }
+.upload-dropzone:hover, .upload-dropzone-active { border-color: #8a6d1f; background: #fffdf8; transform: translateY(-2px); }
+.upload-panel-compact .upload-dropzone { min-height: 238px; padding: 1.5rem; border-radius: 18px; }
+.upload-panel-compact .upload-dropzone p.font-serif { font-size: 1.45rem; }
+.upload-icon-wrap { display: flex; height: 56px; width: 56px; align-items: center; justify-content: center; border-radius: 18px; background: #2a2c30; color: #b08d2e; box-shadow: 0 10px 24px rgba(42,44,48,0.16); }
+
+.document-sheet { min-height: 250px; }
+.status-bar { height: 7px; overflow: hidden; border-radius: 999px; background: #e6decd; }
+.status-bar > span { display: block; height: 100%; border-radius: inherit; background: #8a6d1f; }
+.scan-pulse { animation: scanPulse 1.8s ease-in-out infinite; }
+@keyframes scanPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(176,141,46,0.18); } 50% { box-shadow: 0 0 0 8px rgba(176,141,46,0); } }
+
+.sidebar { background: #2a2c30; }
+[data-sidebar="menu-button"][data-active="true"] { background: #b08d2e; color: #2a2c30; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
-  [type="reset"]:not(:disabled),
-  a[href],
-  select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
-    @apply cursor-pointer;
-  }
-}
-
-@layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
-  .container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
-    padding-right: 1rem;
-  }
-
-  .flex {
-    min-height: 0;
-    min-width: 0;
-  }
-
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem; /* 32px - desktop padding */
-      padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
-    }
-  }
+@media (max-width: 640px) {
+  .upload-dropzone { min-height: 310px; }
 }

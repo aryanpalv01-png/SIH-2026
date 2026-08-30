@@ -1,17 +1,7 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -22,7 +12,57 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const documents = mysqlTable("documents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(),
+  fileUrl: varchar("fileUrl", { length: 768 }).notNull(),
+  documentType: mysqlEnum("documentType", ["aadhaar", "pan", "passport", "marksheet", "bank_statement", "other"]).default("other").notNull(),
+  originalFilename: varchar("originalFilename", { length: 255 }).notNull(),
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  fileSize: int("fileSize").notNull(),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  status: mysqlEnum("status", ["processing", "verified", "needs_review", "likely_forged"]).default("processing").notNull(),
+  confidenceScore: int("confidenceScore").default(0).notNull(),
+  referenceCode: varchar("referenceCode", { length: 32 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const checks = mysqlTable("checks", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  checkName: varchar("checkName", { length: 120 }).notNull(),
+  result: mysqlEnum("result", ["pass", "flag", "not_applicable"]).notNull(),
+  confidence: int("confidence").default(0).notNull(),
+  explanation: text("explanation").notNull(),
+  flaggedRegion: json("flaggedRegion"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const reviews = mysqlTable("reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  reviewerId: int("reviewerId"),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed"]).default("pending").notNull(),
+  reviewerNotes: text("reviewerNotes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+
+export const apiKeys = mysqlTable("apiKeys", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  keyHash: varchar("keyHash", { length: 128 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  lastUsedAt: timestamp("lastUsedAt"),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
-// TODO: Add your tables here
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = typeof documents.$inferInsert;
+export type Check = typeof checks.$inferSelect;
+export type InsertCheck = typeof checks.$inferInsert;
+export type Review = typeof reviews.$inferSelect;
+export type ApiKey = typeof apiKeys.$inferSelect;
