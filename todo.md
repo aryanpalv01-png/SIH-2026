@@ -130,3 +130,8 @@
 ## Checkpoint timeout follow-up
 
 - [x] Remove oversized model training-list text artifacts that are not needed for inference runtime
+
+## GitHub delivery
+
+- [ ] Push the current VeriScan codebase to aryanpalv01-png/SIH-2026
+- [ ] Confirm the pushed branch and commit URL
