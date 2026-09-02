@@ -124,5 +124,9 @@
 
 ## Delivery cleanup
 
-- [ ] Remove only non-runtime TruFor documentation/test images larger than 1 MB so the checkpoint can be saved
+- [x] Remove only non-runtime TruFor documentation/test images larger than 1 MB so the checkpoint can be saved
 - [ ] Retry the clarified integration checkpoint after media cleanup
+
+## Checkpoint timeout follow-up
+
+- [x] Remove oversized model training-list text artifacts that are not needed for inference runtime
