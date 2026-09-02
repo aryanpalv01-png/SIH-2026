@@ -72,6 +72,12 @@ export async function finalizeDocument(documentId: number, userId: number, statu
   await db.update(documents).set({ status, confidenceScore, updatedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
 }
 
+export async function updateDocumentEvidence(documentId: number, userId: number, evidence: { providerHealth: unknown; extractedFields: unknown; comparisonFindings: unknown }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.update(documents).set({ providerHealth: evidence.providerHealth, extractedFields: evidence.extractedFields, comparisonFindings: evidence.comparisonFindings, updatedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+}
+
 export async function createChecks(rows: Array<typeof checks.$inferInsert>) {
   const db = await getDb();
   if (!db || rows.length === 0) return;

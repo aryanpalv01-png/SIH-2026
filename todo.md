@@ -41,3 +41,88 @@
 - [x] Project initialized as a full-stack web-db-user application scaffold.
 - [x] User-provided VeriScan product specification reviewed.
 - [x] Initial implementation plan created and refined for dashboard scope.
+
+## Forensic detection expansion
+
+- [x] Add independently callable metadata/EXIF and PDF metadata inspection module
+- [x] Add Aadhaar Verhoeff and PAN structural validation module with explicit scope boundaries
+- [x] Add QR/barcode decoding and signed-payload verification seam with issuer-key configuration
+- [x] Add image ELA, screenshot/capture-noise, and copy-move/clone analysis modules
+- [x] Add OCR typography consistency analysis seam with optional Tesseract/OpenCV runtime
+- [x] Add Hugging Face AI-image detector integration using a secure HF_API_TOKEN secret
+- [x] Add TruFor and CAT-Net pretrained inference adapters without training or pretending model availability
+- [x] Add score-fusion engine with weighted checksum/signature overrides and per-module breakdown
+- [x] Wire expanded module results into protected scan reports and UI
+- [x] Add tests for module contracts, fusion thresholds, and provider fallbacks
+- [x] Document API-key setup, model-runtime requirements, accuracy limitations, and sample evaluation workflow
+- [x] Re-run typecheck, tests, and responsive visual verification
+- [ ] Save an expanded project checkpoint and deliver the new version
+
+## Forensic QA
+
+- [ ] Keep final validation open until real genuine and edited document samples are evaluated
+- [ ] Do not claim government-record verification or guaranteed authenticity from file-level signals
+
+## Accuracy hardening
+
+- [x] Replace metadata filename heuristics with actual image EXIF and PDF metadata parsing or a validated worker adapter
+- [x] Implement QR/barcode decoding and signed payload verification with issuer public-key parsing and field comparison
+- [x] Replace byte heuristics with authenticated pixel-analysis adapters for ELA heatmaps, screenshot noise variance, and clone regions
+- [x] Add a real OCR typography adapter contract with runtime health reporting and structured result validation
+- [x] Keep the report explicit about which pixel/worker providers are active versus not applicable
+
+## Evidence-fusion hardening
+
+- [x] Add OCR-backed field extraction and compare printed fields with decoded QR payload fields
+- [x] Add self-hosted pixel-analysis adapter for ELA, screenshot noise, and clone results with schema validation
+- [x] Add provider health states to the analysis result and report model
+- [x] Render real provider-state badges in the detailed report
+- [x] Verify the new provider-state and evidence-fusion UI at desktop and mobile widths
+
+## Clarified integration configuration
+
+- [x] Remove OCR_API_URL and OCR_API_KEY requirements; use local pytesseract/Tesseract instead
+- [x] Remove TruFor/CAT-Net API-key requirements; use self-hosted worker URLs without auth headers by default
+- [x] Remove JSON issuer-key configuration requirement; load the UIDAI .cer certificate from project configuration
+- [x] Mark QR verification not applicable for non-Aadhaar document types
+- [x] Add local OCR worker scaffolding and field extraction contract
+- [x] Add UIDAI certificate loader and Aadhaar QR signature verification contract
+- [x] Add self-hosted TruFor and CAT-Net worker service scaffolding with checkpoint/configuration docs
+- [x] Update settings/report provider state copy to match the exact clarified configuration
+- [x] Re-run tests, visual verification, and save the clarified integration checkpoint
+
+## Final exact-policy corrections
+
+- [x] Remove OCR_API_URL from the Node analyzer and run pytesseract locally in the worker process contract
+- [ ] Add a verified UIDAI certificate-path health state and end-to-end validation test without fabricating the certificate
+- [x] Add live health probing for configured self-hosted OCR, UIDAI, TruFor, and CAT-Net services
+- [x] Surface verified live provider health in settings and detailed reports
+
+## Verified provider health
+
+- [x] Add direct health probes for configured TRUFOR_API_URL and CATNET_API_URL endpoints
+- [x] Persist direct health results rather than inferring them only from scan outcomes
+- [x] Add tests covering health probe normalization and report/settings state mapping
+- [ ] Save a new checkpoint after the clarified changes
+
+## Provider-health test coverage
+
+- [x] Add backend tests for healthy, degraded, and not-configured TruFor/CAT-Net health normalization
+- [x] Add verifiable coverage for persisted providerHealth normalization and report/settings provider labels
+
+## Corrected no-key validation
+
+- [x] Rename the pixel-worker checklist item to reflect an unauthenticated self-hosted adapter with schema validation
+- [x] Add direct health-probe tests for healthy, degraded, and not-configured TruFor/CAT-Net states
+- [x] Add persisted providerHealth normalization coverage through serverDocumentToVerification
+- [ ] Keep UIDAI certificate installation and end-to-end signature validation open until a real official .cer file is supplied
+
+## Final health propagation coverage
+
+- [x] Add CAT-Net-specific health-probe tests using the /analyze-catnet route
+- [x] Add a backend test proving TruFor and CAT-Net probe states propagate into providerHealth
+
+## Delivery cleanup
+
+- [ ] Remove only non-runtime TruFor documentation/test images larger than 1 MB so the checkpoint can be saved
+- [ ] Retry the clarified integration checkpoint after media cleanup

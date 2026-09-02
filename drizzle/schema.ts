@@ -27,6 +27,9 @@ export const documents = mysqlTable("documents", {
   referenceCode: varchar("referenceCode", { length: 32 }).notNull().unique(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  providerHealth: json("providerHealth"),
+  extractedFields: json("extractedFields"),
+  comparisonFindings: json("comparisonFindings"),
 });
 
 export const checks = mysqlTable("checks", {
@@ -37,6 +40,8 @@ export const checks = mysqlTable("checks", {
   confidence: int("confidence").default(0).notNull(),
   explanation: text("explanation").notNull(),
   flaggedRegion: json("flaggedRegion"),
+  provider: varchar("provider", { length: 32 }),
+  providerState: varchar("providerState", { length: 24 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

@@ -3,8 +3,8 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { analyzeDocument } from "./analyzer";
-import { createChecks, createDocument, finalizeDocument, getUserDocumentReport, listUserDocuments, requestDocumentReview } from "./db";
+import { runForensicAnalysis } from "./forensics";
+import { createChecks, createDocument, finalizeDocument, getUserDocumentReport, listUserDocuments, requestDocumentReview, updateDocumentEvidence } from "./db";
 import { storagePut } from "./storage";
 
 const documentType = z.enum(["aadhaar", "pan", "passport", "marksheet", "bank_statement", "other"]);
@@ -36,8 +36,9 @@ export const appRouter = router({
       const referenceCode = `VS-${crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
       const created = await createDocument({ userId: ctx.user.id, fileKey: storage.key, fileUrl: storage.url, documentType: input.documentType, originalFilename: input.fileName, mimeType: input.mimeType, fileSize: input.fileSize, status: "processing", confidenceScore: 0, referenceCode });
       if (!created) throw new Error("Document record could not be created");
-      const analysis = analyzeDocument({ filename: input.fileName, mimeType: input.mimeType, fileSize: input.fileSize, documentType: input.documentType });
-      await createChecks(analysis.checks.map((check) => ({ documentId: created.id, checkName: check.checkName, result: check.result, confidence: check.confidence, explanation: check.explanation, flaggedRegion: check.flaggedRegion ?? null })));
+      const analysis = await runForensicAnalysis({ filename: input.fileName, mimeType: input.mimeType, fileSize: input.fileSize, documentType: input.documentType, content });
+      await createChecks(analysis.checks.map((check) => ({ documentId: created.id, checkName: check.checkName, result: check.result, confidence: check.confidence, explanation: check.explanation, flaggedRegion: check.flaggedRegion ?? null, provider: check.provider, providerState: analysis.providerHealth[check.provider] ?? "not_applicable" })));
+      await updateDocumentEvidence(created.id, ctx.user.id, { providerHealth: analysis.providerHealth, extractedFields: analysis.extractedFields, comparisonFindings: analysis.comparisonFindings });
       await finalizeDocument(created.id, ctx.user.id, analysis.status, analysis.score);
       return { id: created.id, referenceCode, status: analysis.status, confidenceScore: analysis.score };
     }),

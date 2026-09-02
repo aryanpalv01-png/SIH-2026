@@ -16,6 +16,8 @@ export type VerificationCheck = {
   confidence: number;
   explanation: string;
   flaggedRegion?: { x: number; y: number; width: number; height: number };
+  provider?: string;
+  providerState?: string;
 };
 
 export type VerificationDocument = {
@@ -29,6 +31,9 @@ export type VerificationDocument = {
   mimeType: string;
   reference: string;
   checks: VerificationCheck[];
+  providerHealth?: Record<string, "healthy" | "not_configured" | "not_applicable" | "degraded">;
+  extractedFields?: Record<string, string>;
+  comparisonFindings?: string[];
 };
 
 export const scanStages = [
@@ -303,6 +308,9 @@ export type ServerDocumentRecord = {
   status: "processing" | DocumentStatus;
   confidenceScore: number;
   referenceCode: string;
+  providerHealth?: unknown;
+  extractedFields?: unknown;
+  comparisonFindings?: unknown;
 };
 
 export type ServerCheckRecord = {
@@ -312,16 +320,28 @@ export type ServerCheckRecord = {
   confidence: number;
   explanation: string;
   flaggedRegion?: unknown;
+  provider?: string | null;
+  providerState?: string | null;
 };
 
 export function formatCheckName(checkName: string) {
   const labels: Record<string, string> = {
     file_format_metadata: "File format & metadata inspection",
+    metadata_exif_inspection: "Metadata / EXIF inspection",
     compression_analysis: "Compression & recompression analysis",
+    ela_compression_analysis: "Error level analysis",
     font_consistency: "Text and font consistency",
+    ocr_typography_consistency: "OCR typography consistency",
     qr_checksum_validation: "QR / checksum validation",
+    qr_signature_verification: "QR signature verification",
     noise_consistency: "Noise consistency",
+    screenshot_capture_detection: "Screenshot / capture-type detection",
     clone_detection: "Clone / copy-move detection",
+    copy_move_clone_detection: "Copy-move / clone detection",
+    ai_generated_image_detector: "AI-generated image detector",
+    trufor_inference: "TruFor inference adapter",
+    catnet_inference: "CAT-Net inference adapter",
+    checksum_identifier_validation: "Identifier checksum validation",
   };
   return labels[checkName] ?? checkName.replaceAll("_", " ").replace(/\\b\\w/g, (character) => character.toUpperCase());
 }
@@ -330,6 +350,15 @@ function isRegion(value: unknown): value is { x: number; y: number; width: numbe
   if (!value || typeof value !== "object") return false;
   const region = value as Record<string, unknown>;
   return ["x", "y", "width", "height"].every((key) => typeof region[key] === "number");
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return Boolean(value && typeof value === "object" && Object.values(value as Record<string, unknown>).every((item) => typeof item === "string"));
+}
+
+function isProviderHealth(value: unknown): value is Record<string, "healthy" | "not_configured" | "not_applicable" | "degraded"> {
+  const allowed = new Set(["healthy", "not_configured", "not_applicable", "degraded"]);
+  return Boolean(value && typeof value === "object" && Object.values(value as Record<string, unknown>).every((item) => typeof item === "string" && allowed.has(item)));
 }
 
 export function serverDocumentToVerification(document: ServerDocumentRecord, checkRows: ServerCheckRecord[] = []): VerificationDocument {
@@ -344,6 +373,9 @@ export function serverDocumentToVerification(document: ServerDocumentRecord, che
     fileSize: `${Math.max(0.1, document.fileSize / 1024 / 1024).toFixed(1)} MB`,
     mimeType: document.mimeType,
     reference: document.referenceCode,
+    providerHealth: isProviderHealth(document.providerHealth) ? document.providerHealth : undefined,
+    extractedFields: isStringRecord(document.extractedFields) ? document.extractedFields : undefined,
+    comparisonFindings: Array.isArray(document.comparisonFindings) ? document.comparisonFindings.filter((item): item is string => typeof item === "string") : undefined,
     checks: checkRows.map((check) => ({
       id: String(check.id),
       name: formatCheckName(check.checkName),
@@ -352,6 +384,8 @@ export function serverDocumentToVerification(document: ServerDocumentRecord, che
       confidence: check.confidence,
       explanation: check.explanation,
       flaggedRegion: isRegion(check.flaggedRegion) ? check.flaggedRegion : undefined,
+      provider: check.provider ?? undefined,
+      providerState: check.providerState ?? undefined,
     })),
   };
 }
@@ -386,6 +420,17 @@ export function getResultLabel(result: CheckResult) {
   if (result === "pass") return "Pass";
   if (result === "flag") return "Flagged";
   return "N/A";
+}
+
+export function getProviderStatusLabel(state: string | undefined, fallback: string) {
+  if (state === "healthy") return "Active";
+  if (state === "degraded") return "Degraded";
+  if (state === "not_configured") return "Not configured";
+  return fallback;
+}
+
+export function getProviderDisplayName(provider: string) {
+  return ({ local: "Local preflight", huggingface: "Hugging Face", trufor: "TruFor", catnet: "CAT-Net", ocr: "OCR worker", pixel: "Pixel worker" } as Record<string, string>)[provider] ?? provider;
 }
 
 export function getScanStatus(score: number): DocumentStatus {
