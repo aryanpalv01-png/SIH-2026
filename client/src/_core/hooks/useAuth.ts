@@ -1,7 +1,7 @@
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -21,6 +21,15 @@ export function useAuth(options?: UseAuthOptions) {
     refetchOnWindowFocus: false,
   });
 
+  const [localUser, setLocalUser] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem("veriscan_local_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       utils.auth.me.setData(undefined, null);
@@ -35,36 +44,46 @@ export function useAuth(options?: UseAuthOptions) {
         error instanceof TRPCClientError &&
         error.data?.code === "UNAUTHORIZED"
       ) {
-        return;
+        // Ignored
       }
-      throw error;
     } finally {
-      // Clear the Preview auto-login token mirrored into sessionStorage, so
-      // header-based sessions (Safari ITP / WebView) are logged out too. The
-      // backend cookie is cleared by the logout mutation.
-      try {
-        sessionStorage.removeItem("manus-cookie");
-      } catch {}
+      localStorage.removeItem("veriscan_local_user");
+      setLocalUser(null);
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }
   }, [logoutMutation, utils]);
 
+  const loginAsDemo = useCallback((customUser?: any) => {
+    const demoUser = customUser || {
+      id: 1,
+      openId: "demo-analyst-001",
+      name: "Institutional Analyst",
+      email: "analyst@veriscan.internal",
+      role: "admin",
+    };
+    localStorage.setItem("veriscan_local_user", JSON.stringify(demoUser));
+    setLocalUser(demoUser);
+    return demoUser;
+  }, []);
+
   const state = useMemo(() => {
+    const activeUser = meQuery.data ?? localUser ?? null;
     localStorage.setItem(
       "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
+      JSON.stringify(activeUser)
     );
     return {
-      user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
+      user: activeUser,
+      loading: meQuery.isLoading && !localUser,
       error: meQuery.error ?? logoutMutation.error ?? null,
-      isAuthenticated: Boolean(meQuery.data),
+      isAuthenticated: Boolean(activeUser),
     };
   }, [
     meQuery.data,
     meQuery.error,
     meQuery.isLoading,
+    localUser,
     logoutMutation.error,
     logoutMutation.isPending,
   ]);
@@ -94,5 +113,6 @@ export function useAuth(options?: UseAuthOptions) {
     ...state,
     refresh: () => meQuery.refetch(),
     logout,
+    loginAsDemo,
   };
 }

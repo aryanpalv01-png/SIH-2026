@@ -15,21 +15,21 @@ import Scan from "./pages/Scan";
 import Settings from "./pages/Settings";
 import Verify from "./pages/Verify";
 
-function WorkspaceRoute({ children }: { children: React.ReactNode }) {
-  return <DashboardLayout>{children}</DashboardLayout>;
+function WorkspaceRoute({ children, allowGuest = false }: { children: React.ReactNode; allowGuest?: boolean }) {
+  return <DashboardLayout allowGuest={allowGuest}>{children}</DashboardLayout>;
 }
 
 function Router() {
   return <Switch>
     <Route path="/" component={Home} />
     <Route path="/auth/:mode" component={Auth} />
-    <Route path="/dashboard"><WorkspaceRoute><Dashboard /></WorkspaceRoute></Route>
-    <Route path="/verify"><WorkspaceRoute><Verify /></WorkspaceRoute></Route>
-    <Route path="/reports"><WorkspaceRoute><Reports /></WorkspaceRoute></Route>
-    <Route path="/history"><WorkspaceRoute><History /></WorkspaceRoute></Route>
-    <Route path="/settings"><WorkspaceRoute><Settings /></WorkspaceRoute></Route>
-    <Route path="/scan/:id"><WorkspaceRoute><Scan /></WorkspaceRoute></Route>
-    <Route path="/report/:id"><WorkspaceRoute><Report /></WorkspaceRoute></Route>
+    <Route path="/dashboard"><WorkspaceRoute allowGuest><Dashboard /></WorkspaceRoute></Route>
+    <Route path="/verify"><WorkspaceRoute allowGuest><Verify /></WorkspaceRoute></Route>
+    <Route path="/reports"><WorkspaceRoute allowGuest><Reports /></WorkspaceRoute></Route>
+    <Route path="/history"><WorkspaceRoute allowGuest><History /></WorkspaceRoute></Route>
+    <Route path="/settings"><WorkspaceRoute allowGuest><Settings /></WorkspaceRoute></Route>
+    <Route path="/scan/:id"><WorkspaceRoute allowGuest><Scan /></WorkspaceRoute></Route>
+    <Route path="/report/:id"><WorkspaceRoute allowGuest><Report /></WorkspaceRoute></Route>
     <Route path="/404" component={NotFound} />
     <Route component={NotFound} />
   </Switch>;

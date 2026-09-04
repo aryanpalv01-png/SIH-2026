@@ -29,8 +29,22 @@ export default function Home() {
             <a href="#use-cases" className="hover:text-paper">Use cases</a>
           </nav>
           <div className="flex items-center gap-3">
-            {user ? <Link href="/dashboard"><Button variant="outline" className="border-paper/25 bg-transparent text-paper hover:bg-paper/10 hover:text-paper">Open workspace <ArrowRight className="ml-2 h-4 w-4" /></Button></Link> : <Button variant="ghost" className="hidden text-paper/70 hover:bg-paper/10 hover:text-paper sm:inline-flex" onClick={() => startLogin()}>Sign in</Button>}
-            <Link href={user ? "/verify" : "/auth/signup"}><Button className="bg-bronze text-ink hover:bg-bronze-light">Start a check</Button></Link>
+            {user ? (
+              <Link href="/dashboard">
+                <Button variant="outline" className="border-paper/25 bg-transparent text-paper hover:bg-paper/10 hover:text-paper">
+                  Open workspace <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/auth/login">
+                <Button variant="ghost" className="hidden text-paper/70 hover:bg-paper/10 hover:text-paper sm:inline-flex">
+                  Sign in
+                </Button>
+              </Link>
+            )}
+            <Link href="/verify">
+              <Button className="bg-bronze text-ink hover:bg-bronze-light">Start a check</Button>
+            </Link>
           </div>
         </div>
       </header>

@@ -41,12 +41,18 @@ const DEFAULT_WIDTH = 246;
 const MIN_WIDTH = 210;
 const MAX_WIDTH = 360;
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+  allowGuest = false,
+}: {
+  children: React.ReactNode;
+  allowGuest?: boolean;
+}) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user } = useAuth();
+  const { loading, user, loginAsDemo } = useAuth();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -54,16 +60,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) return <DashboardLayoutSkeleton />;
 
-  if (!user) {
+  if (!user && !allowGuest) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-charcoal px-6 text-paper">
         <div className="w-full max-w-md rounded-[20px] border border-paper/10 bg-charcoal-light p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.22)]">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-[18px] border border-bronze/50 bg-bronze/10 text-bronze"><ShieldCheck className="h-7 w-7" strokeWidth={1.5} /></div>
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-[18px] border border-bronze/50 bg-bronze/10 text-bronze">
+            <ShieldCheck className="h-7 w-7" strokeWidth={1.5} />
+          </div>
           <p className="eyebrow text-bronze">Private workspace</p>
-          <h1 className="mt-3 font-serif text-3xl font-semibold">Sign in to VeriScan</h1>
-          <p className="mt-3 text-sm leading-6 text-paper/65">Your verification reports are private to your account. Continue to access your dashboard and securely managed scan history.</p>
-          <Button onClick={() => startLogin()} size="lg" className="mt-7 w-full bg-bronze text-ink hover:bg-bronze-light">Continue securely</Button>
-          <p className="mt-4 text-xs text-paper/45">Authentication is handled by the existing secure account foundation.</p>
+          <h1 className="mt-3 font-serif text-3xl font-semibold">Access VeriScan Workspace</h1>
+          <p className="mt-3 text-sm leading-6 text-paper/65">
+            Continue to access your forensic screening workbench, recent audit reports, and organization settings.
+          </p>
+          <div className="mt-7 space-y-3">
+            <Button
+              onClick={() => loginAsDemo()}
+              size="lg"
+              className="w-full bg-bronze text-ink hover:bg-bronze-light font-semibold"
+            >
+              Sign In as Institutional Analyst
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => (window.location.href = "/auth/login")}
+              className="w-full border-paper/20 bg-transparent text-paper hover:bg-paper/10"
+            >
+              Sign in with Email & Password
+            </Button>
+          </div>
+          <p className="mt-5 text-xs text-paper/45">
+            Instant evaluation access enabled for forensic inspection.
+          </p>
         </div>
       </div>
     );

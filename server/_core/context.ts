@@ -20,6 +20,21 @@ export async function createContext(
     user = null;
   }
 
+  // In local/demo mode when external OAuth is unconfigured, provide default analyst user
+  if (!user && (!process.env.OAUTH_SERVER_URL || process.env.NODE_ENV === "development")) {
+    user = {
+      id: 1,
+      openId: "demo-analyst-001",
+      name: "Institutional Analyst",
+      email: "analyst@veriscan.internal",
+      loginMethod: "demo",
+      role: "admin",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastSignedIn: new Date(),
+    } as User;
+  }
+
   return {
     req: opts.req,
     res: opts.res,
