@@ -78,6 +78,46 @@ export async function updateDocumentEvidence(documentId: number, userId: number,
   await db.update(documents).set({ providerHealth: evidence.providerHealth, extractedFields: evidence.extractedFields, comparisonFindings: evidence.comparisonFindings, updatedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
 }
 
+export async function applyWebhookAnalysis(documentId: number, result: {
+  status: "verified" | "needs_review" | "likely_forged";
+  confidenceScore: number;
+  checks?: Array<{
+    checkName: string;
+    result: "pass" | "flag" | "not_applicable";
+    confidence: number;
+    explanation: string;
+    flaggedRegion?: unknown;
+    provider?: string;
+    providerState?: string;
+  }>;
+  providerHealth?: unknown;
+  extractedFields?: unknown;
+  comparisonFindings?: unknown;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.update(documents).set({
+    status: result.status,
+    confidenceScore: result.confidenceScore,
+    ...(result.providerHealth !== undefined ? { providerHealth: result.providerHealth } : {}),
+    ...(result.extractedFields !== undefined ? { extractedFields: result.extractedFields } : {}),
+    ...(result.comparisonFindings !== undefined ? { comparisonFindings: result.comparisonFindings } : {}),
+    updatedAt: new Date(),
+  }).where(eq(documents.id, documentId));
+  if (result.checks?.length) {
+    await createChecks(result.checks.map((check) => ({
+      documentId,
+      checkName: check.checkName,
+      result: check.result,
+      confidence: check.confidence,
+      explanation: check.explanation,
+      flaggedRegion: check.flaggedRegion ?? null,
+      provider: check.provider ?? "n8n",
+      providerState: check.providerState ?? "active",
+    })));
+  }
+}
+
 export async function createChecks(rows: Array<typeof checks.$inferInsert>) {
   const db = await getDb();
   if (!db || rows.length === 0) return;

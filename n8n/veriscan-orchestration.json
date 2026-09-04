@@ -1,0 +1,226 @@
+{
+  "name": "VeriScan Microservices Orchestration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "veriscan-doc-uploaded",
+        "options": {}
+      },
+      "name": "3. Supabase Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "webhookId": "veriscan-doc-uploaded"
+    },
+    {
+      "parameters": {
+        "url": "={{$node[\"3. Supabase Webhook\"].json[\"body\"][\"record\"][\"file_url\"]}}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "name": "2. Supabase Storage Download",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// 4. Flow Dispatcher: Prepare metadata and dispatch to parallel branches\nconst record = $items(\"3. Supabase Webhook\")[0].json.body.record || {};\nreturn [{\n  json: {\n    docId: record.id,\n    documentType: record.document_type || 'other',\n    filename: record.original_filename || 'document',\n    mimeType: record.mime_type || 'image/jpeg',\n    fileUrl: record.file_url\n  },\n  binary: $input.item.binary\n}];"
+      },
+      "name": "4. Flow Dispatcher",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LIGHTWEIGHT_URL || 'http://localhost:8000'}}/analyze-fast",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data:file",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "documentType",
+              "value": "={{$node[\"4. Flow Dispatcher\"].json[\"documentType\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "5. Fast Check Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [800, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.GPU_URL || 'http://localhost:8000'}}/analyze-gpu",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data:file",
+        "options": {}
+      },
+      "name": "6. GPU AI Models",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LIGHTWEIGHT_URL || 'http://localhost:8000'}}/analyze-hf",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data:file",
+        "options": {}
+      },
+      "name": "7. External AI API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [800, 440]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Merge observations from Fast Branch (5), GPU Branch (6), and API Branch (7)\nconst fastChecks = $items(\"5. Fast Check Service\")[0].json.checks || [];\nconst gpuChecks = $items(\"6. GPU AI Models\")[0].json.checks || [];\nconst hfCheck = $items(\"7. External AI API\")[0].json || {};\n\nconst allChecks = [...fastChecks, ...gpuChecks, hfCheck];\nreturn [{\n  json: {\n    docId: $items(\"4. Flow Dispatcher\")[0].json.docId,\n    checks: allChecks\n  }\n}];"
+      },
+      "name": "Merge Evidence Streams",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1060, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LIGHTWEIGHT_URL || 'http://localhost:8000'}}/fuse-scores",
+        "jsonParameters": true,
+        "body": "={{JSON.stringify({ checks: $node[\"Merge Evidence Streams\"].json[\"checks\"] })}}",
+        "options": {}
+      },
+      "name": "8. Score Fusion Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1280, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/documents?id=eq.{{$node[\"Merge Evidence Streams\"].json[\"docId\"]}}",
+        "headers": {
+          "apikey": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}",
+          "Authorization": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}",
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        "jsonParameters": true,
+        "body": "={{JSON.stringify({\n  status: $node[\"8. Score Fusion Engine\"].json[\"status\"],\n  confidence_score: $node[\"8. Score Fusion Engine\"].json[\"score\"],\n  checks: $node[\"8. Score Fusion Engine\"].json[\"checks\"],\n  report: {\n    verdict: $node[\"8. Score Fusion Engine\"].json[\"verdict\"],\n    summary: $node[\"8. Score Fusion Engine\"].json[\"summary\"],\n    hard_fail: $node[\"8. Score Fusion Engine\"].json[\"hard_fail\"]\n  },\n  updated_at: new Date().toISOString()\n})}}",
+        "options": {}
+      },
+      "name": "9. Supabase DB Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1520, 300]
+    }
+  ],
+  "connections": {
+    "3. Supabase Webhook": {
+      "main": [
+        [
+          {
+            "node": "2. Supabase Storage Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Supabase Storage Download": {
+      "main": [
+        [
+          {
+            "node": "4. Flow Dispatcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Flow Dispatcher": {
+      "main": [
+        [
+          {
+            "node": "5. Fast Check Service",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "6. GPU AI Models",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "7. External AI API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Fast Check Service": {
+      "main": [
+        [
+          {
+            "node": "Merge Evidence Streams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. GPU AI Models": {
+      "main": [
+        [
+          {
+            "node": "Merge Evidence Streams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. External AI API": {
+      "main": [
+        [
+          {
+            "node": "Merge Evidence Streams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Evidence Streams": {
+      "main": [
+        [
+          {
+            "node": "8. Score Fusion Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Score Fusion Engine": {
+      "main": [
+        [
+          {
+            "node": "9. Supabase DB Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

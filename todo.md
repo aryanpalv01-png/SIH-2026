@@ -122,16 +122,19 @@
 - [x] Add CAT-Net-specific health-probe tests using the /analyze-catnet route
 - [x] Add a backend test proving TruFor and CAT-Net probe states propagate into providerHealth
 
-## Delivery cleanup
-
-- [x] Remove only non-runtime TruFor documentation/test images larger than 1 MB so the checkpoint can be saved
-- [ ] Retry the clarified integration checkpoint after media cleanup
-
-## Checkpoint timeout follow-up
-
-- [x] Remove oversized model training-list text artifacts that are not needed for inference runtime
+## Microservices architecture & crazy forensic workstation
+- [x] Correct Verhoeff D5 Cayley table in Python and Node
+- [x] Complete n8n orchestration workflow JSON (9-node architecture flow)
+- [x] Complete Supabase master PostgreSQL schema and RLS policies
+- [x] Build multi-layer Forensic Deep-Dive Canvas with real-time 2x/4x/8x loupe magnifier
+- [x] Build live Microservices Architecture Telemetry visualizer
+- [x] Build official bank-grade Certificate of Authenticity and PDF export
+- [x] Add 1-click test document sandbox for genuine and forged Aadhaar, PAN, and certificates
+- [x] 100% test coverage across Python worker (31/31 passed) and Node Vitest (20/20 passed)
+- [x] Clean zero-error TypeScript check and successful production bundle
 
 ## GitHub delivery
 
 - [ ] Push the current VeriScan codebase to aryanpalv01-png/SIH-2026
 - [ ] Confirm the pushed branch and commit URL
+

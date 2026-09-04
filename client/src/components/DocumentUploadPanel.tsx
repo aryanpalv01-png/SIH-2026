@@ -69,6 +69,33 @@ export function DocumentUploadPanel({
           <span className="inline-flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5 text-bronze-dark" /> Encrypted in transit</span>
           <span className="inline-flex items-center gap-1.5"><FileCheck2 className="h-3.5 w-3.5 text-bronze-dark" /> Reference-only storage</span>
         </div>
+
+        {/* Quick Test Samples */}
+        <div className="mt-6 border-t border-border/70 pt-4 w-full text-center">
+          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-ink mb-2.5">
+            Or test with forensic benchmark samples:
+          </p>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {[
+              { id: "doc-aadhaar-valid", label: "Genuine Aadhaar", tone: "verified" },
+              { id: "doc-aadhaar-forged", label: "Forged Aadhaar (Verhoeff Fail)", tone: "forged" },
+              { id: "doc-pan-forged", label: "Invalid PAN", tone: "forged" },
+              { id: "doc-photoshop-spliced", label: "Photoshop Spliced", tone: "forged" },
+            ].map((sample) => (
+              <a
+                key={sample.id}
+                href={`/report/${sample.id}`}
+                className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition-all ${
+                  sample.tone === "verified"
+                    ? "border-bronze/40 bg-bronze/10 text-bronze-dark hover:bg-bronze hover:text-ink"
+                    : "border-forged/30 bg-forged/5 text-forged hover:bg-forged hover:text-paper"
+                }`}
+              >
+                {sample.label}
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
       {error && <p className="mt-3 rounded-lg border border-forged/20 bg-forged/5 px-3 py-2 text-sm text-forged" role="alert">{error}</p>}
     </div>
