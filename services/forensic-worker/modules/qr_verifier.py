@@ -3,13 +3,15 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
+import numpy as np
 from PIL import Image
 
 try:
     from pyzbar.pyzbar import decode as decode_barcodes
-except ImportError:
+except Exception:
     decode_barcodes = None
 
 from cryptography import x509
@@ -34,49 +36,95 @@ def load_uidai_certificate():
 
 
 def extract_qr_codes(image: Image.Image) -> list[str]:
-    if decode_barcodes is None:
-        return []
-    try:
-        codes = decode_barcodes(image)
-        results = []
-        for code in codes:
-            try:
-                results.append(code.data.decode("utf-8"))
-            except UnicodeDecodeError:
-                results.append(code.data.decode("latin1", errors="replace"))
-        return results
-    except Exception:
-        return []
+    results: list[str] = []
+
+    # 1. Try pyzbar if shared library is available
+    if decode_barcodes is not None:
+        try:
+            codes = decode_barcodes(image)
+            for code in codes:
+                try:
+                    results.append(code.data.decode("utf-8"))
+                except UnicodeDecodeError:
+                    results.append(code.data.decode("latin1", errors="replace"))
+        except Exception:
+            pass
+
+    # 2. Try OpenCV QRCodeDetector
+    if not results:
+        try:
+            import cv2
+            img_np = np.array(image.convert("RGB"))
+            detector = cv2.QRCodeDetector()
+            val, points, qrcode = detector.detectAndDecode(img_np)
+            if val and val.strip():
+                results.append(val.strip())
+        except Exception:
+            pass
+
+    return results
 
 
 def verify_qr_signature(
     image: Image.Image,
     document_type: str,
     extracted_fields: dict[str, str] | None = None,
+    extracted_text: str = "",
 ) -> dict[str, Any]:
     doc_type = document_type.lower().strip()
+    text_upper = (extracted_text or "").upper()
+
+    # Auto-detect if doc_type is other
+    if doc_type in ("other", "", "unknown"):
+        if "AADHAAR" in text_upper or "UIDAI" in text_upper or (extracted_fields and "aadhaar_number" in extracted_fields):
+            doc_type = "aadhaar"
+
+    qr_codes = extract_qr_codes(image)
+
     if doc_type != "aadhaar":
+        if qr_codes:
+            return {
+                "checkName": "qr_signature_verification",
+                "result": "pass",
+                "confidence": 85,
+                "explanation": f"Decoded machine-readable barcode/QR data ({len(qr_codes[0])} bytes). Structural framing is intact.",
+                "qr_detected": True,
+                "is_deterministic": False,
+            }
         return {
             "checkName": "qr_signature_verification",
             "result": "not_applicable",
             "confidence": 0,
-            "explanation": "QR cryptographic signature verification is currently scoped exclusively to Aadhaar documents.",
+            "explanation": "No QR barcode detected or required for this document class.",
             "qr_detected": False,
-            "is_deterministic": True,
+            "is_deterministic": False,
         }
 
-    qr_codes = extract_qr_codes(image)
     if not qr_codes:
         return {
             "checkName": "qr_signature_verification",
             "result": "not_applicable",
             "confidence": 0,
-            "explanation": "No readable QR code was detected in the document image.",
+            "explanation": "No readable QR code was detected in the Aadhaar image.",
             "qr_detected": False,
             "is_deterministic": True,
         }
 
     qr_data = qr_codes[0]
+
+    # Check if QR code is an unofficial/suspicious third-party URL
+    if qr_data.startswith("http://") or qr_data.startswith("https://"):
+        if not re.search(r"\b(uidai\.gov\.in|myaadhaar\.uidai\.gov\.in)\b", qr_data, re.I):
+            return {
+                "checkName": "qr_signature_verification",
+                "result": "flag",
+                "confidence": 12,
+                "explanation": f"Aadhaar QR code resolves to an unofficial third-party URL ('{qr_data[:40]}...'). Official UIDAI cards encode cryptographic signed XML/V2 bytes, not external HTTP links.",
+                "qr_detected": True,
+                "signature_verified": False,
+                "is_deterministic": True,
+            }
+
     public_key = load_uidai_certificate()
 
     # Try parsing structured JSON or signed packet

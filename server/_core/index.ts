@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "path";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -33,9 +34,33 @@ async function startServer() {
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+
+  // Direct document analysis endpoint
+  app.post("/api/analyze-direct", async (req, res) => {
+    try {
+      const { fileName, mimeType, fileSize, documentType, contentBase64 } = req.body;
+      if (!contentBase64) {
+        return res.status(400).json({ error: "Missing contentBase64" });
+      }
+      const buffer = Buffer.from(contentBase64, "base64");
+      const { runForensicAnalysis } = await import("../forensics");
+      const analysis = await runForensicAnalysis({
+        filename: fileName || "upload",
+        mimeType: mimeType || "image/jpeg",
+        fileSize: fileSize || buffer.length,
+        documentType: documentType || "other",
+        content: buffer,
+      });
+      res.json(analysis);
+    } catch (err: any) {
+      console.error("Direct analysis error:", err);
+      res.status(500).json({ error: err?.message || "Internal analysis error" });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

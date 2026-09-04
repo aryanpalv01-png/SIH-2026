@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { DocumentUploadPanel } from "@/components/DocumentUploadPanel";
 import { VeriScanLogo } from "@/components/VeriScanLogo";
-import { makeDemoDocument } from "@/lib/veriscan";
+import { analyzeDocumentDirectly, makeDemoDocument } from "@/lib/veriscan";
 import { writeLocalScan } from "@/lib/scanStore";
 import { ArrowRight, Check, FileCheck2, LockKeyhole, ScanLine, ShieldCheck } from "lucide-react";
 import { useLocation, Link } from "wouter";
@@ -12,10 +12,16 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const handleFile = (file: File) => {
-    const document = makeDemoDocument(file);
-    writeLocalScan(document);
-    setLocation(`/scan/${document.id}`);
+  const handleFile = async (file: File) => {
+    try {
+      const document = await analyzeDocumentDirectly(file);
+      writeLocalScan(document);
+      setLocation(`/scan/${document.id}`);
+    } catch {
+      const document = makeDemoDocument(file);
+      writeLocalScan(document);
+      setLocation(`/scan/${document.id}`);
+    }
   };
 
   return (

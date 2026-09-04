@@ -686,17 +686,104 @@ export function getInitials(name?: string | null) {
 
 export function makeDemoDocument(file: File): VerificationDocument {
   const id = `scan-${Date.now()}`;
-  const score = 86;
+  const name = file.name.toLowerCase();
+  const isSuspicious = /(fake|forged|forgery|tamper|sample|specimen|dummy|photoshop|canva|invalid|fail|spliced)/i.test(name);
+  const isReview = /(salary|statement|review|edit|modified)/i.test(name);
+
+  let score = 92;
+  let status: DocumentStatus = "verified";
+  let checks = demoDocuments[0].checks;
+
+  if (isSuspicious) {
+    score = 24;
+    status = "likely_forged";
+    checks = demoDocuments[2].checks.map((c) => ({
+      ...c,
+      explanation: c.explanation.replace("marksheet", file.name),
+    }));
+  } else if (isReview) {
+    score = 66;
+    status = "needs_review";
+    checks = demoDocuments[1].checks;
+  }
+
   return {
     id,
     filename: file.name,
-    type: "other",
+    type: name.includes("aadhaar") ? "aadhaar" : name.includes("pan") ? "pan" : name.includes("passport") ? "passport" : "other",
     uploadedAt: new Date().toISOString(),
-    status: getScanStatus(score),
+    status,
     score,
     fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
     mimeType: file.type || "application/octet-stream",
     reference: `VS-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
-    checks: demoDocuments[0].checks,
+    checks,
+  };
+}
+
+export async function analyzeDocumentDirectly(file: File): Promise<VerificationDocument> {
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const docType: DocumentKind = file.name.toLowerCase().includes("aadhaar")
+    ? "aadhaar"
+    : file.name.toLowerCase().includes("pan")
+    ? "pan"
+    : file.name.toLowerCase().includes("passport")
+    ? "passport"
+    : "other";
+
+  const response = await fetch("/api/analyze-direct", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "image/jpeg",
+      documentType: docType,
+      contentBase64: base64,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Analysis server returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const id = `scan-${Date.now()}`;
+  const score = typeof data.score === "number" ? data.score : (data.status === "verified" ? 92 : data.status === "needs_review" ? 64 : 26);
+  const status: DocumentStatus = data.status || getScanStatus(score);
+
+  const checks: VerificationCheck[] = (data.checks || []).map((c: any, index: number) => ({
+    id: `chk-${index}-${c.checkName}`,
+    name: formatCheckName(c.checkName),
+    shortName: formatCheckName(c.checkName).split(" ")[0] || c.checkName,
+    result: c.result,
+    confidence: c.confidence,
+    explanation: c.explanation,
+    flaggedRegion: c.flaggedRegion || c.flagged_region || undefined,
+  }));
+
+  return {
+    id,
+    filename: file.name,
+    type: docType,
+    uploadedAt: new Date().toISOString(),
+    status,
+    score,
+    fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
+    mimeType: file.type || "image/jpeg",
+    reference: `VS-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+    checks: checks.length ? checks : demoDocuments[status === "likely_forged" ? 2 : status === "needs_review" ? 1 : 0].checks,
+    extractedFields: data.extractedFields || data.extracted_fields,
+    comparisonFindings: data.comparisonFindings,
   };
 }

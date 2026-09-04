@@ -1,17 +1,15 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uploads via Forge Server presigned URL to S3 (PUT direct).
-// Downloads return /manus-storage/{key} paths served via 307 redirect.
-
+import fs from "node:fs/promises";
+import path from "node:path";
 import { ENV } from "./_core/env";
+
+const LOCAL_STORAGE_DIR = path.resolve(process.cwd(), "uploads");
 
 function getForgeConfig() {
   const forgeUrl = ENV.forgeApiUrl;
   const forgeKey = ENV.forgeApiKey;
 
   if (!forgeUrl || !forgeKey) {
-    throw new Error(
-      "Storage config missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY",
-    );
+    return null;
   }
 
   return { forgeUrl: forgeUrl.replace(/\/+$/, ""), forgeKey };
@@ -33,8 +31,19 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream",
 ): Promise<{ key: string; url: string }> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
+  const config = getForgeConfig();
   const key = appendHashSuffix(normalizeKey(relKey));
+
+  if (!config) {
+    // Local filesystem storage fallback
+    const targetPath = path.join(LOCAL_STORAGE_DIR, key);
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    const buffer = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+    await fs.writeFile(targetPath, buffer);
+    return { key, url: `/uploads/${key}` };
+  }
+
+  const { forgeUrl, forgeKey } = config;
 
   // 1. Get presigned PUT URL from Forge
   const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
@@ -73,12 +82,20 @@ export async function storagePut(
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
+  const config = getForgeConfig();
+  if (!config) {
+    return { key, url: `/uploads/${key}` };
+  }
   return { key, url: `/manus-storage/${key}` };
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
+  const config = getForgeConfig();
   const key = normalizeKey(relKey);
+  if (!config) {
+    return `/uploads/${key}`;
+  }
+  const { forgeUrl, forgeKey } = config;
 
   const getUrl = new URL("v1/storage/presign/get", forgeUrl + "/");
   getUrl.searchParams.set("path", key);

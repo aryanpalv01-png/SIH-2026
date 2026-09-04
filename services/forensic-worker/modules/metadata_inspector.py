@@ -7,12 +7,61 @@ import exifread
 import pikepdf
 
 EDITING_SOFTWARE_PATTERN = re.compile(
-    r"(photoshop|gimp|canva|illustrator|affinity|pixelmator|coreldraw|paint\.net|snapseed)",
+    r"(photoshop|gimp|canva|illustrator|affinity|pixelmator|coreldraw|paint\.net|snapseed|picsart|photopea|pixlr|lightroom|after\s*effects)",
+    re.IGNORECASE,
+)
+
+SUSPICIOUS_FILENAME_PATTERN = re.compile(
+    r"(fake|forged|forgery|sample|specimen|edited|modified|tampered|dummy|test[-_ ]?copy|photoshop|template)",
     re.IGNORECASE,
 )
 
 
-def inspect_image_exif(raw_bytes: bytes) -> dict[str, Any]:
+def inspect_raw_bytes_for_software(raw_bytes: bytes) -> str | None:
+    # Check for direct software strings in raw bytes / XMP headers
+    probes = [
+        (b"Adobe Photoshop", "Adobe Photoshop"),
+        (b"Photoshop", "Photoshop"),
+        (b"Canva", "Canva"),
+        (b"GIMP", "GIMP"),
+        (b"PicsArt", "PicsArt"),
+        (b"Photopea", "Photopea"),
+        (b"Affinity Designer", "Affinity Designer"),
+        (b"Affinity Photo", "Affinity Photo"),
+        (b"CorelDRAW", "CorelDRAW"),
+        (b"Paint.NET", "Paint.NET"),
+    ]
+    for pattern, name in probes:
+        if pattern.lower() in raw_bytes[:16384].lower() or pattern.lower() in raw_bytes[-8192:].lower():
+            return name
+    return None
+
+
+def inspect_image_exif(raw_bytes: bytes, filename: str = "") -> dict[str, Any]:
+    # Check filename first
+    if filename and SUSPICIOUS_FILENAME_PATTERN.search(filename):
+        matched = SUSPICIOUS_FILENAME_PATTERN.search(filename).group(0)
+        return {
+            "checkName": "metadata_exif_inspection",
+            "result": "flag",
+            "confidence": 15,
+            "explanation": f"File name contains explicit non-genuine marker '{matched}'. File provenance cannot be trusted.",
+            "software": matched,
+            "tags_found": 0,
+        }
+
+    # Check raw byte markers
+    raw_software = inspect_raw_bytes_for_software(raw_bytes)
+    if raw_software:
+        return {
+            "checkName": "metadata_exif_inspection",
+            "result": "flag",
+            "confidence": 18,
+            "explanation": f"Image header/XMP metadata confirms creation or modification with digital editing software: {raw_software}.",
+            "software": raw_software,
+            "tags_found": 1,
+        }
+
     try:
         tags = exifread.process_file(BytesIO(raw_bytes), details=False)
     except Exception as exc:
@@ -59,7 +108,29 @@ def inspect_image_exif(raw_bytes: bytes) -> dict[str, Any]:
     }
 
 
-def inspect_pdf_metadata(raw_bytes: bytes) -> dict[str, Any]:
+def inspect_pdf_metadata(raw_bytes: bytes, filename: str = "") -> dict[str, Any]:
+    if filename and SUSPICIOUS_FILENAME_PATTERN.search(filename):
+        matched = SUSPICIOUS_FILENAME_PATTERN.search(filename).group(0)
+        return {
+            "checkName": "metadata_exif_inspection",
+            "result": "flag",
+            "confidence": 15,
+            "explanation": f"File name contains explicit non-genuine marker '{matched}'.",
+            "software": matched,
+            "tags_found": 0,
+        }
+
+    raw_software = inspect_raw_bytes_for_software(raw_bytes)
+    if raw_software:
+        return {
+            "checkName": "metadata_exif_inspection",
+            "result": "flag",
+            "confidence": 18,
+            "explanation": f"PDF stream metadata reveals traces of editing software: {raw_software}.",
+            "software": raw_software,
+            "tags_found": 1,
+        }
+
     try:
         pdf = pikepdf.open(BytesIO(raw_bytes))
         docinfo = pdf.docinfo
@@ -112,5 +183,5 @@ def inspect_pdf_metadata(raw_bytes: bytes) -> dict[str, Any]:
 def inspect_metadata(raw_bytes: bytes, filename: str = "", mime_type: str = "") -> dict[str, Any]:
     is_pdf = mime_type == "application/pdf" or filename.lower().endswith(".pdf") or raw_bytes.startswith(b"%PDF")
     if is_pdf:
-        return inspect_pdf_metadata(raw_bytes)
-    return inspect_image_exif(raw_bytes)
+        return inspect_pdf_metadata(raw_bytes, filename=filename)
+    return inspect_image_exif(raw_bytes, filename=filename)

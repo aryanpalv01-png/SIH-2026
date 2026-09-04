@@ -130,6 +130,7 @@ def run_fast_checks(
             image=image,
             document_type=document_type,
             extracted_fields=extracted_fields,
+            extracted_text=extracted_text,
         )
         checks.append({
             "checkName": qr_result["checkName"],

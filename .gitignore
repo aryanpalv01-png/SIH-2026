@@ -121,3 +121,7 @@ venv/
 .venv/
 .pytest_cache/
 
+# Local uploaded files
+uploads/
+
+

@@ -7,9 +7,20 @@ import numpy as np
 from PIL import Image
 
 try:
+    from rapidocr_onnxruntime import RapidOCR
+    _rapid_ocr = RapidOCR()
+except Exception:
+    _rapid_ocr = None
+
+try:
     import pytesseract
 except ImportError:
     pytesseract = None
+
+SPECIMEN_PATTERN = re.compile(
+    r"\b(SPECIMEN|SAMPLE|DUMMY|FAKE|FORGERY|FORGED|VOID|TEST\s+DOCUMENT|NOT\s+VALID|ALTERED\s+COPY|TEMPLATE)\b",
+    re.IGNORECASE,
+)
 
 
 def extract_fields_from_text(text: str) -> dict[str, str]:
@@ -30,20 +41,35 @@ def extract_fields_from_text(text: str) -> dict[str, str]:
 
         # Common ID document fields
         dob_match = re.search(r"\b(DOB|Date of Birth|Birth)\s*[:\-]?\s*(\d{2}[/\-.]\d{2}[/\-.]\d{4})", line, re.I)
-        if dob_match:
+        if dob_match and "dob" not in fields:
             fields["dob"] = dob_match.group(2)
 
         gender_match = re.search(r"\b(MALE|FEMALE|TRANSGENDER)\b", line, re.I)
         if gender_match and "gender" not in fields:
             fields["gender"] = gender_match.group(1).upper()
 
-        aadhaar_match = re.search(r"\b(\d{4}\s\d{4}\s\d{4})\b", line)
+        aadhaar_match = re.search(r"\b(\d{4}\s?\d{4}\s?\d{4})\b", line)
         if aadhaar_match and "aadhaar_number" not in fields:
-            fields["aadhaar_number"] = aadhaar_match.group(1)
+            raw_aadhaar = re.sub(r"\D", "", aadhaar_match.group(1))
+            if len(raw_aadhaar) == 12:
+                fields["aadhaar_number"] = f"{raw_aadhaar[:4]} {raw_aadhaar[4:8]} {raw_aadhaar[8:]}"
 
         pan_match = re.search(r"\b([A-Z]{5}\d{4}[A-Z])\b", line)
         if pan_match and "pan_number" not in fields:
             fields["pan_number"] = pan_match.group(1)
+
+    # Document-wide regex search if lines missed patterns
+    if "aadhaar_number" not in fields:
+        m = re.search(r"\b(\d{4}\s\d{4}\s\d{4})\b", text) or re.search(r"\b(\d{12})\b", text.replace(" ", ""))
+        if m:
+            raw_aadhaar = re.sub(r"\D", "", m.group(0))
+            if len(raw_aadhaar) == 12:
+                fields["aadhaar_number"] = f"{raw_aadhaar[:4]} {raw_aadhaar[4:8]} {raw_aadhaar[8:]}"
+
+    if "pan_number" not in fields:
+        m = re.search(r"\b([A-Z]{5}\d{4}[A-Z])\b", text)
+        if m:
+            fields["pan_number"] = m.group(1)
 
     return fields
 
@@ -140,53 +166,110 @@ def check_typography_opencv(image: Image.Image) -> dict[str, Any]:
 
 def analyze_typography(image: Image.Image) -> dict[str, Any]:
     text = ""
-    fields = {}
+    fields: dict[str, str] = {}
+    flagged_region = None
+    w, h = image.size
 
-    if pytesseract is not None:
+    # 1. Try RapidOCR (high accuracy ONNX model with full bounding boxes)
+    if _rapid_ocr is not None:
         try:
-            text = pytesseract.image_to_string(image)
-            fields = extract_fields_from_text(text)
-            data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+            img_np = np.array(image.convert("RGB"))
+            ocr_res, _ = _rapid_ocr(img_np)
+            if ocr_res:
+                text_lines = []
+                confidences = []
+                box_heights = []
 
-            # Analyze word heights and baseline alignments
-            word_heights = [int(h) for h, w in zip(data.get("height", []), data.get("text", [])) if w.strip() and int(h) > 0]
-            word_confs = [float(c) for c in data.get("conf", []) if str(c).replace(".", "", 1).isdigit() and float(c) > 0]
+                for item in ocr_res:
+                    pts = item[0]  # [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+                    line_text = str(item[1]).strip()
+                    conf = float(item[2])
+                    text_lines.append(line_text)
+                    confidences.append(conf)
 
-            if word_heights:
-                mean_height = np.mean(word_heights)
-                std_height = np.std(word_heights)
-                mean_conf = np.mean(word_confs) if word_confs else 85.0
+                    ys = [p[1] for p in pts]
+                    xs = [p[0] for p in pts]
+                    box_h = max(ys) - min(ys)
+                    box_w = max(xs) - min(xs)
+                    box_heights.append((min(xs), min(ys), box_w, box_h, line_text))
 
-                # Also perform OpenCV stroke check
-                cv_check = check_typography_opencv(image)
-                flagged_region = cv_check.get("flagged_region")
+                text = "\n".join(text_lines)
+                fields = extract_fields_from_text(text)
 
-                if cv_check["result"] == "flag":
+                # Check for explicit specimen / fake markers in extracted text
+                specimen_match = SPECIMEN_PATTERN.search(text)
+                if specimen_match:
+                    matched_word = specimen_match.group(0).upper()
+                    specimen_box = next((b for b in box_heights if matched_word.lower() in b[4].lower()), None)
+                    if specimen_box:
+                        flagged_region = {
+                            "x": round((specimen_box[0] / w) * 100),
+                            "y": round((specimen_box[1] / h) * 100),
+                            "width": round((specimen_box[2] / w) * 100),
+                            "height": round((specimen_box[3] / h) * 100),
+                        }
                     return {
                         "checkName": "ocr_typography_consistency",
                         "result": "flag",
-                        "confidence": cv_check["confidence"],
-                        "explanation": cv_check["explanation"],
+                        "confidence": 6,
+                        "explanation": f"Document text contains explicit specimen/forgery marker ('{matched_word}'). The file cannot be authenticated.",
                         "flagged_region": flagged_region,
                         "extracted_fields": fields,
                         "extracted_text": text,
                     }
 
-                conf = max(65, min(95, round(mean_conf)))
+                # Check for font height / baseline anomalies in digits or numbers
+                if len(box_heights) >= 4:
+                    mean_h = np.mean([b[3] for b in box_heights])
+                    std_h = np.std([b[3] for b in box_heights])
+
+                    anomalies = [b for b in box_heights if abs(b[3] - mean_h) > max(4.0, 2.8 * std_h) and re.search(r"\d", b[4])]
+                    if anomalies:
+                        ab = anomalies[0]
+                        flagged_region = {
+                            "x": round((ab[0] / w) * 100),
+                            "y": round((ab[1] / h) * 100),
+                            "width": round((ab[2] / w) * 100),
+                            "height": round((ab[3] / h) * 100),
+                        }
+                        return {
+                            "checkName": "ocr_typography_consistency",
+                            "result": "flag",
+                            "confidence": 36,
+                            "explanation": f"Detected font height discrepancy ({ab[3]:.1f}px vs average {mean_h:.1f}px) in numeric text field '{ab[4]}'. Possible spliced or edited typography.",
+                            "flagged_region": flagged_region,
+                            "extracted_fields": fields,
+                            "extracted_text": text,
+                        }
+
+                mean_conf = float(np.mean(confidences)) if confidences else 0.85
+                cv_res = check_typography_opencv(image)
+                if cv_res["result"] == "flag":
+                    cv_res["extracted_fields"] = fields
+                    cv_res["extracted_text"] = text
+                    return cv_res
+
                 return {
                     "checkName": "ocr_typography_consistency",
                     "result": "pass",
-                    "confidence": conf,
-                    "explanation": f"Tesseract extracted {len(word_heights)} words with consistent glyph metrics and OCR confidence ({mean_conf:.1f}%).",
+                    "confidence": max(75, min(97, round(mean_conf * 100))),
+                    "explanation": f"OCR extracted {len(text_lines)} text regions with consistent font baseline, stroke geometry, and high character confidence ({mean_conf * 100:.1f}%).",
                     "flagged_region": None,
                     "extracted_fields": fields,
                     "extracted_text": text,
                 }
         except Exception:
-            # Tesseract binary not available or failed; gracefully proceed to CV check
             pass
 
-    # OpenCV typography analysis fallback
+    # 2. Try pytesseract if available
+    if pytesseract is not None:
+        try:
+            text = pytesseract.image_to_string(image)
+            fields = extract_fields_from_text(text)
+        except Exception:
+            pass
+
+    # 3. Fallback to OpenCV typography analysis
     cv_res = check_typography_opencv(image)
     cv_res["extracted_fields"] = fields
     cv_res["extracted_text"] = text

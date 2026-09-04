@@ -3,15 +3,15 @@ from __future__ import annotations
 from typing import Any
 
 CHECK_WEIGHTS: dict[str, float] = {
-    "checksum_validation": 3.0,
+    "checksum_validation": 3.5,
     "qr_signature_verification": 3.0,
+    "ocr_typography_consistency": 2.0,
+    "metadata_exif_inspection": 1.5,
     "trufor_inference": 2.0,
     "catnet_inference": 2.0,
     "ela_compression_analysis": 1.5,
     "copy_move_clone_detection": 1.5,
     "ai_generated_image_detector": 1.2,
-    "ocr_typography_consistency": 1.2,
-    "metadata_exif_inspection": 1.0,
     "screenshot_capture_detection": 1.0,
 }
 
@@ -28,16 +28,21 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
             "verdict": "Needs Review",
             "summary": "No active forensic checks could be applied to this document.",
             "hard_fail": False,
-            "flagged_checks": [],
-            "passed_checks": [],
+            "flagged_findings": [],
+            "flagged_count": 0,
+            "passed_count": 0,
+            "total_active_checks": 0,
             "not_applicable_checks": [c.get("checkName") for c in checks if c.get("result") == "not_applicable"],
             "checks": checks,
         }
 
-    # Check for deterministic failures (Aadhaar/PAN checksum, QR signature)
+    # Deterministic failure: checksum fail, QR signature fail, or explicit specimen/forgery marker
     hard_failed_checks = [
         c for c in active_checks
-        if c.get("checkName") in DETERMINISTIC_CHECKS and c.get("result") == "flag"
+        if (
+            (c.get("checkName") in DETERMINISTIC_CHECKS and c.get("result") == "flag")
+            or (c.get("checkName") == "ocr_typography_consistency" and c.get("result") == "flag" and float(c.get("confidence", 50)) <= 10)
+        )
     ]
     has_hard_fail = len(hard_failed_checks) > 0
 
@@ -53,8 +58,6 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
 
     raw_score = round(weighted_sum / max(0.1, total_weight))
 
-    # Deterministic failure override:
-    # A failure in checksum or QR signature MUST push verdict strongly to Likely Forged (<40)
     if has_hard_fail:
         final_score = min(raw_score, 29)
     else:
@@ -76,9 +79,10 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
     na_list = [c.get("checkName") for c in checks if c.get("result") == "not_applicable"]
 
     explanations = [f"- {c.get('checkName')}: {c.get('explanation')}" for c in flagged]
+
     if has_hard_fail:
         summary = (
-            f"Likely Forged (Score: {final_score}/100). Critical failure in deterministic mathematical verification "
+            f"Likely Forged (Score: {final_score}/100). Critical failure in mathematical/integrity verification "
             f"({', '.join(c.get('checkName') for c in hard_failed_checks)}). "
             f"{len(flagged)} checks flagged out of {len(active_checks)} active forensic modules."
         )

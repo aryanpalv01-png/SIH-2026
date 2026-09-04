@@ -30,7 +30,7 @@ PERMUTATION = (
 
 INVERSE = (0, 4, 3, 2, 1, 5, 6, 7, 8, 9)
 
-# Standard PAN regex: 5 letters (4th is entity type), 4 digits, 1 letter
+# Standard PAN regex: 5 letters (4th is entity type [ABCFGHLJPT]), 4 digits, 1 letter
 PAN_REGEX = re.compile(r"^[A-Z]{3}[ABCFGHLJPT][A-Z]\d{4}[A-Z]$")
 
 
@@ -63,11 +63,22 @@ def validate_checksum(
     extracted_text: str = "",
 ) -> dict[str, Any]:
     doc_type = document_type.lower().strip()
+    text_upper = extracted_text.upper()
+
+    # Auto-detect document type if "other" or unspecified
+    if doc_type in ("other", "", "unknown"):
+        if any(w in text_upper for w in ["AADHAAR", "UIDAI", "UNIQUE IDENTIFICATION", "MERA AADHAAR"]):
+            doc_type = "aadhaar"
+        elif any(w in text_upper for w in ["INCOME TAX DEPARTMENT", "PERMANENT ACCOUNT NUMBER"]):
+            doc_type = "pan"
+        elif re.search(r"\b\d{4}\s?\d{4}\s?\d{4}\b", extracted_text):
+            doc_type = "aadhaar"
+        elif re.search(r"\b[A-Z]{5}\d{4}[A-Z]\b", text_upper):
+            doc_type = "pan"
 
     if doc_type == "aadhaar":
         candidate = candidate_id
         if not candidate and extracted_text:
-            # Look for 12 digits (possibly spaced: 1234 5678 9012)
             matches = re.findall(r"\b\d{4}\s?\d{4}\s?\d{4}\b", extracted_text)
             if matches:
                 candidate = re.sub(r"\s", "", matches[0])
@@ -81,7 +92,7 @@ def validate_checksum(
                 "checkName": "checksum_validation",
                 "result": "not_applicable",
                 "confidence": 0,
-                "explanation": "No 12-digit Aadhaar number could be identified for checksum verification.",
+                "explanation": "No 12-digit Aadhaar number could be identified in the text for checksum verification.",
                 "candidate": None,
                 "is_deterministic": True,
             }
@@ -103,9 +114,9 @@ def validate_checksum(
             "result": "pass" if is_valid else "flag",
             "confidence": 99 if is_valid else 5,
             "explanation": (
-                "The 12-digit Aadhaar number passes the mathematical Verhoeff checksum algorithm."
+                f"The 12-digit Aadhaar identifier passes the official Verhoeff dihedral group D5 checksum."
                 if is_valid
-                else "The extracted Aadhaar number FAILS the mathematical Verhoeff checksum algorithm. High forgery risk."
+                else f"The extracted 12-digit identifier fails the mathematical Verhoeff checksum algorithm. High forgery risk: UIDAI issuance rules require valid checksum congruence."
             ),
             "candidate": candidate_clean[:4] + "XXXX" + candidate_clean[-4:],
             "is_deterministic": True,
@@ -114,7 +125,7 @@ def validate_checksum(
     elif doc_type == "pan":
         candidate = candidate_id
         if not candidate and extracted_text:
-            matches = re.findall(r"\b[A-Z]{5}\d{4}[A-Z]\b", extracted_text.upper())
+            matches = re.findall(r"\b[A-Z]{5}\d{4}[A-Z]\b", text_upper)
             if matches:
                 candidate = matches[0]
 
@@ -123,7 +134,7 @@ def validate_checksum(
                 "checkName": "checksum_validation",
                 "result": "not_applicable",
                 "confidence": 0,
-                "explanation": "No 10-character PAN string could be identified for structural validation.",
+                "explanation": "No 10-character PAN string could be identified in the text for structural validation.",
                 "candidate": None,
                 "is_deterministic": True,
             }
@@ -133,15 +144,33 @@ def validate_checksum(
         return {
             "checkName": "checksum_validation",
             "result": "pass" if is_valid else "flag",
-            "confidence": 95 if is_valid else 10,
+            "confidence": 95 if is_valid else 8,
             "explanation": (
-                "The PAN structure conforms to the required Income Tax Department issuing format and 4th-character entity code."
+                f"The PAN identifier '{clean_pan}' conforms to the required Income Tax Department issuing format and 4th-character entity code."
                 if is_valid
-                else "The PAN structure violates the mandated format rules (invalid character positions or invalid entity code)."
+                else f"The PAN identifier '{clean_pan}' violates official format rules: the 4th character must be one of [A,B,C,F,G,H,L,J,P,T]."
             ),
             "candidate": clean_pan,
             "is_deterministic": True,
         }
+
+    # If document type is generic but has numbers that could be tested
+    if candidate_id:
+        digits = re.sub(r"\D", "", candidate_id)
+        if len(digits) == 12:
+            is_valid = validate_verhoeff(digits)
+            return {
+                "checkName": "checksum_validation",
+                "result": "pass" if is_valid else "flag",
+                "confidence": 94 if is_valid else 6,
+                "explanation": (
+                    "Extracted 12-digit identifier passes the Verhoeff checksum algorithm."
+                    if is_valid
+                    else "Extracted 12-digit identifier FAILS the mathematical Verhoeff checksum algorithm."
+                ),
+                "candidate": digits[:4] + "XXXX" + digits[-4:],
+                "is_deterministic": True,
+            }
 
     return {
         "checkName": "checksum_validation",

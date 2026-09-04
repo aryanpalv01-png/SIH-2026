@@ -56,15 +56,15 @@ function isVerhoeffValid(value: string) {
   return checksum === 0;
 }
 
-export function validateDocumentIdentifier(input: ForensicInput): ForensicModuleResult {
-  const candidate = input.filename.match(/\d{10,16}/)?.[0] ?? "";
-  if (input.documentType === "aadhaar") {
+export function validateDocumentIdentifier(input: ForensicInput, extractedFields: Record<string, string> = {}): ForensicModuleResult {
+  const candidate = (extractedFields.aadhaar_number || input.filename.match(/\d{10,16}/)?.[0] || "").replace(/\D/g, "");
+  if (input.documentType === "aadhaar" || (input.documentType === "other" && candidate.length === 12)) {
     if (!candidate) return check("checksum_identifier_validation", "not_applicable", 0, "No Aadhaar-like identifier was extracted because OCR text is not available in this runtime.", "local");
     const valid = candidate.length === 12 && isVerhoeffValid(candidate);
     return check("checksum_identifier_validation", valid ? "pass" : "flag", valid ? 94 : 8, valid ? "The extracted 12-digit identifier passes the Verhoeff checksum." : "The extracted Aadhaar-like identifier fails the Verhoeff checksum. Confirm the printed number and issuing source.", "local");
   }
-  if (input.documentType === "pan") {
-    const pan = input.filename.toUpperCase().match(/[A-Z]{5}\d{4}[A-Z]/)?.[0];
+  if (input.documentType === "pan" || (input.documentType === "other" && extractedFields.pan_number)) {
+    const pan = (extractedFields.pan_number || input.filename.toUpperCase().match(/[A-Z]{5}\d{4}[A-Z]/)?.[0] || "").toUpperCase();
     if (!pan) return check("checksum_identifier_validation", "not_applicable", 0, "No PAN-like identifier was extracted because OCR text is not available in this runtime.", "local");
     const valid = /^[A-Z]{3}[ABCFGHLJPT][A-Z]\d{4}[A-Z]$/.test(pan);
     return check("checksum_identifier_validation", valid ? "pass" : "flag", valid ? 92 : 10, valid ? "The extracted PAN-like identifier matches the expected structural rules." : "The extracted PAN-like identifier does not match the expected structural rules.", "local");
@@ -253,9 +253,86 @@ function providerConfigKey(provider: ForensicProvider) {
 }
 
 export async function runForensicAnalysis(input: ForensicInput): Promise<ForensicAnalysis> {
+  const workerBase = process.env.FORENSIC_WORKER_URL || "http://127.0.0.1:8000";
+  if (input.content && /^image\//.test(input.mimeType)) {
+    try {
+      const formData = new FormData();
+      const blob = new Blob([new Uint8Array(input.content)], { type: input.mimeType });
+      formData.append("file", blob, input.filename);
+      formData.append("documentType", input.documentType);
+
+      const workerResp = await fetch(`${workerBase.replace(/\/+$/, "")}/analyze-full`, {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (workerResp.ok) {
+        const payload = await workerResp.json() as {
+          status: "verified" | "needs_review" | "likely_forged";
+          confidence_score: number;
+          verdict: string;
+          summary: string;
+          hard_fail: boolean;
+          checks: Array<{
+            checkName: string;
+            result: AnalysisResult;
+            confidence: number;
+            explanation: string;
+            provider?: ForensicProvider;
+            flagged_region?: AnalysisRegion | null;
+          }>;
+          extracted_fields?: Record<string, string>;
+        };
+
+        const checks: ForensicModuleResult[] = payload.checks.map((c) => ({
+          checkName: c.checkName === "checksum_validation" ? "checksum_identifier_validation" : c.checkName,
+          result: c.result,
+          confidence: c.confidence,
+          explanation: c.explanation,
+          provider: (c.provider as ForensicProvider) || "local",
+          available: c.result !== "not_applicable",
+          flaggedRegion: c.flagged_region || undefined,
+        }));
+
+        const providers: Record<string, ForensicAnalysis["providers"][string]> = {
+          local: "active",
+          ocr: "active",
+          pixel: "active",
+          huggingface: process.env.HF_API_TOKEN ? "active" : "not_configured",
+          trufor: process.env.TRUFOR_API_URL ? "active" : "not_configured",
+          catnet: process.env.CATNET_API_URL ? "active" : "not_configured",
+        };
+
+        const providerHealth: ForensicAnalysis["providerHealth"] = {
+          local: "healthy",
+          ocr: "healthy",
+          pixel: "healthy",
+          huggingface: process.env.HF_API_TOKEN ? "healthy" : "not_configured",
+          trufor: process.env.TRUFOR_API_URL ? "healthy" : "not_configured",
+          catnet: process.env.CATNET_API_URL ? "healthy" : "not_configured",
+        };
+
+        return {
+          score: payload.confidence_score,
+          status: payload.status,
+          checks,
+          providers,
+          providerHealth,
+          extractedFields: payload.extracted_fields || {},
+          comparisonFindings: checks
+            .filter((item) => item.result === "flag")
+            .map((item) => `${item.checkName}: ${item.explanation}`),
+        };
+      }
+    } catch {
+      // Fall through to local Node analysis
+    }
+  }
+
   const ocr = await typographyConsistency(input);
   const extractedFields = (ocr as ForensicModuleResult & { extractedFields?: Record<string, string> }).extractedFields ?? {};
-  const checks = [await inspectMetadata(input), validateDocumentIdentifier(input), await verifyQrOrBarcode(input, extractedFields), analyzeCompressionAndEla(input), ...detectCopyMoveAndScreenshot(input), ocr, await callHuggingFace(input), await callExternalAdapter("trufor", input), await callExternalAdapter("catnet", input), ...await callExternalPixelAdapter(input)];
+  const checks = [await inspectMetadata(input), validateDocumentIdentifier(input, extractedFields), await verifyQrOrBarcode(input, extractedFields), analyzeCompressionAndEla(input), ...detectCopyMoveAndScreenshot(input), ocr, await callHuggingFace(input), await callExternalAdapter("trufor", input), await callExternalAdapter("catnet", input), ...await callExternalPixelAdapter(input)];
   const fused = fuseForensicChecks(checks);
   const providers = checks.reduce<Record<string, ForensicAnalysis["providers"][string]>>((result, item) => { result[item.provider] = item.result === "not_applicable" ? (item.provider === "local" ? "not_applicable" : (process.env[providerConfigKey(item.provider)] ? "not_applicable" : "not_configured")) : "active"; return result; }, {});
   const [workerHealth, truforHealth, catnetHealth] = await Promise.all([probeWorkerHealth(), probeConfiguredServiceHealth(process.env.TRUFOR_API_URL), probeConfiguredServiceHealth(process.env.CATNET_API_URL)]);
