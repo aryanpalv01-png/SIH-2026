@@ -2,10 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 
 // Supabase credentials for VeriScan Govt Forensic Architecture
 export const SUPABASE_URL =
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) ||
   (import.meta as any).env?.VITE_SUPABASE_URL ||
   "https://dubwryhfjyeuilahaknw.supabase.co";
 
 export const SUPABASE_ANON_KEY =
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
   (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
   "";
 
