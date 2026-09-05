@@ -17,9 +17,19 @@ describe("provider health display mapping", () => {
     expect(report.comparisonFindings).toEqual(["Example"]);
   });
 
-  it("keeps provider names readable", () => {
-    expect(getProviderDisplayName("huggingface")).toBe("Hugging Face");
-    expect(getProviderDisplayName("trufor")).toBe("TruFor");
-    expect(getProviderDisplayName("unknown_worker")).toBe("unknown_worker");
+  it("correctly resolves previewUrl from fileUrl", () => {
+    const report = serverDocumentToVerification({
+      id: 8,
+      originalFilename: "aadhaar_card.jpg",
+      documentType: "aadhaar",
+      mimeType: "image/jpeg",
+      fileSize: 4096,
+      uploadedAt: new Date("2026-09-01T00:00:00Z"),
+      status: "verified",
+      confidenceScore: 95,
+      referenceCode: "VS-URL-TEST",
+      fileUrl: "https://supabase.co/storage/v1/object/public/documents/aadhaar.jpg",
+    }, []);
+    expect(report.previewUrl).toBe("https://supabase.co/storage/v1/object/public/documents/aadhaar.jpg");
   });
 });

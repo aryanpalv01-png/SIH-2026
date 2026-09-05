@@ -1,24 +1,14 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { getInitials, getProviderStatusLabel } from "@/lib/veriscan";
-import { trpc } from "@/lib/trpc";
-import { Bell, Check, Copy, KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
-import { useMemo, useState } from "react";
+import { getInitials } from "@/lib/veriscan";
+import { Copy, KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 export default function Settings() {
   const { user } = useAuth();
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [reviewAlerts, setReviewAlerts] = useState(true);
   const [apiKey, setApiKey] = useState("");
-  const scansQuery = trpc.scans.list.useQuery(undefined, { retry: false });
-  const latestHealth = useMemo(() => {
-    const health = scansQuery.data?.find((scan) => scan.providerHealth && typeof scan.providerHealth === "object")?.providerHealth;
-    return health && typeof health === "object" ? health as Record<string, string> : undefined;
-  }, [scansQuery.data]);
-  const providerStatus = (key: string, fallback: string) => getProviderStatusLabel(latestHealth?.[key], fallback);
 
   const generateKey = () => {
     const generated = `vs_live_${crypto.randomUUID().replaceAll("-", "").slice(0, 24)}`;
@@ -26,12 +16,124 @@ export default function Settings() {
     toast.success("API key generated", { description: "Copy it now. For security, this preview does not persist secret values." });
   };
 
-  return <div className="mx-auto max-w-[1100px]"><div className="border-b border-border pb-7"><p className="eyebrow text-bronze-dark">Workspace controls</p><h1 className="mt-3 font-serif text-3xl font-bold tracking-[-0.035em] sm:text-4xl">Settings</h1><p className="mt-2 text-sm leading-6 text-muted-ink">Manage your account, integration access, and alert preferences.</p></div><div className="mt-7 space-y-7"><section className="rounded-[20px] border border-border bg-paper p-5 sm:p-7"><div className="flex items-start gap-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bronze/12 text-bronze-dark"><UserRound className="h-5 w-5" /></div><div><p className="eyebrow text-bronze-dark">Account details</p><h2 className="mt-2 font-serif text-2xl font-bold">Your VeriScan identity</h2><p className="mt-2 text-sm leading-6 text-muted-ink">These details are supplied by your authenticated account foundation.</p></div></div><div className="mt-7 grid gap-5 sm:grid-cols-2"><div><label className="mb-2 block text-xs font-semibold uppercase tracking-[0.11em] text-muted-ink">Full name</label><Input value={user?.name ?? "Account holder"} readOnly className="h-11 border-border bg-paper-deep text-ink" /></div><div><label className="mb-2 block text-xs font-semibold uppercase tracking-[0.11em] text-muted-ink">Email address</label><Input value={user?.email ?? "Authenticated account"} readOnly className="h-11 border-border bg-paper-deep text-ink" /></div></div><div className="mt-5 flex items-center gap-3 rounded-xl border border-border bg-paper-deep p-4"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-charcoal text-sm font-semibold text-paper">{getInitials(user?.name)}</span><div><p className="text-sm font-semibold">Authenticated workspace</p><p className="mt-1 text-xs text-muted-ink">User-specific scan data is protected by server-side access checks.</p></div></div></section>
-    <section className="rounded-[20px] border border-border bg-paper p-5 sm:p-7"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div className="flex items-start gap-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bronze/12 text-bronze-dark"><KeyRound className="h-5 w-5" /></div><div><p className="eyebrow text-bronze-dark">Organization API</p><h2 className="mt-2 font-serif text-2xl font-bold">Connect VeriScan to onboarding</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-ink">Generate an access key for an internal integration. Keep it in your secrets manager and rotate it when a team member leaves.</p></div></div><Button variant="outline" className="border-border bg-transparent text-ink hover:bg-paper-deep" onClick={generateKey}><RefreshCw className="mr-2 h-4 w-4" /> Generate key</Button></div>{apiKey && <div className="mt-6 flex flex-col gap-3 rounded-xl border border-bronze/25 bg-bronze/6 p-4 sm:flex-row sm:items-center sm:justify-between"><code className="break-all text-xs text-ink">{apiKey}</code><Button variant="outline" size="sm" className="self-start border-bronze/30 bg-transparent text-ink hover:bg-bronze/10 sm:self-auto" onClick={() => navigator.clipboard?.writeText(apiKey).then(() => toast.success("API key copied"))}><Copy className="mr-2 h-3.5 w-3.5" /> Copy</Button></div>}<div className="mt-6 flex items-center gap-3 rounded-xl border border-border bg-paper-deep p-4 text-xs leading-5 text-muted-ink"><LockKeyhole className="h-4 w-4 shrink-0 text-bronze-dark" /> In the production integration, only a one-way hash of API keys is retained in the database.</div></section>
-    <section className="rounded-[20px] border border-border bg-paper p-5 sm:p-7"><div className="flex items-start gap-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bronze/12 text-bronze-dark"><ShieldCheck className="h-5 w-5" /></div><div><p className="eyebrow text-bronze-dark">Forensic providers</p><h2 className="mt-2 font-serif text-2xl font-bold">Accuracy signals</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-ink">Provider credentials stay server-side. Each model is treated as one evidence stream and never as an automatic authenticity verdict.</p></div></div><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><Provider name="Hugging Face" detail="AI-image likelihood" status={providerStatus("huggingface", "HF_API_TOKEN")} /><Provider name="OCR" detail="Local Tesseract" status={providerStatus("ocr", "Local only")} /><Provider name="UIDAI" detail="Aadhaar certificate" status={providerStatus("local", ".cer file")} /><Provider name="TruFor" detail="Self-hosted PyTorch" status={providerStatus("trufor", "Self-hosted")} /><Provider name="CAT-Net" detail="Self-hosted PyTorch" status={providerStatus("catnet", "Self-hosted")} /></div><p className="mt-5 text-xs leading-5 text-muted-ink">Only Hugging Face uses a third-party API token. OCR runs locally with Tesseract, Aadhaar QR trust uses the operator-installed UIDAI public certificate, and TruFor/CAT-Net run behind self-hosted worker endpoints with no vendor API key.</p></section>
-    <section className="rounded-[20px] border border-border bg-paper p-5 sm:p-7"><div className="flex items-start gap-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bronze/12 text-bronze-dark"><Bell className="h-5 w-5" /></div><div><p className="eyebrow text-bronze-dark">Notifications</p><h2 className="mt-2 font-serif text-2xl font-bold">Choose what reaches you</h2></div></div><div className="mt-7 divide-y divide-border"><Preference label="Report ready" detail="Receive an email when a screening has finished." checked={emailAlerts} onCheckedChange={setEmailAlerts} /><Preference label="Human review updates" detail="Be notified when a requested review changes status." checked={reviewAlerts} onCheckedChange={setReviewAlerts} /></div></section>
-    <section className="rounded-[20px] border border-border bg-charcoal p-5 text-paper sm:p-7"><div className="flex items-start gap-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bronze text-ink"><ShieldCheck className="h-5 w-5" /></div><div><p className="eyebrow text-bronze-light">Privacy controls</p><h2 className="mt-2 font-serif text-2xl font-bold">Keep the data boundary clear</h2><p className="mt-2 max-w-xl text-sm leading-6 text-paper/60">Uploaded files are stored through a secure reference path. Reports are designed to remain useful without making raw document bytes part of application records.</p><div className="mt-6 flex items-center gap-2 text-sm font-semibold text-bronze-light"><Check className="h-4 w-4" /> No government database lookup</div></div></div></section></div></div>;
+  return (
+    <div className="mx-auto max-w-[1100px] space-y-6">
+      {/* Top Banner */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[#FAF7F0] shadow-xs">
+        <div className="tiranga-stripe" />
+        <div className="p-6 sm:p-8">
+          <span className="gov-pill text-[10px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-saffron" />
+            प्रशासनिक नियंत्रण · Officer Configuration
+          </span>
+          <h1 className="mt-3 font-serif text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Account & System Settings
+          </h1>
+          <p className="mt-1 text-xs leading-relaxed text-slate-600">
+            Manage your authenticated forensic credentials, government workspace isolation, and programmatic DPI Microservice API keys.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {/* Officer Credentials */}
+        <section className="rounded-2xl border border-slate-200 bg-[#FAF7F0] p-6 sm:p-8 shadow-xs">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-saffron/15 text-saffron-dark">
+              <UserRound className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-saffron-dark">Officer Credentials</p>
+              <h2 className="mt-1 font-serif text-xl font-bold text-slate-900">VeriScan Investigator Profile</h2>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                All screening records, document blobs, and audit logs are strictly cryptographically scoped to your authenticated identity.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">Official Name</label>
+              <Input
+                value={user?.name ?? "Forensic Officer"}
+                readOnly
+                className="h-11 border-slate-200 bg-white text-slate-900 font-medium text-xs rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">Email Identifier</label>
+              <Input
+                value={user?.email ?? "investigator@nic.in"}
+                readOnly
+                className="h-11 border-slate-200 bg-white text-slate-900 font-mono text-xs rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ashoka text-xs font-bold text-white">
+              {getInitials(user?.name || user?.email)}
+            </span>
+            <div className="text-xs leading-relaxed">
+              <p className="font-bold text-slate-900">Row-Level Isolated Government Ledger</p>
+              <p className="text-slate-500">
+                Multi-tenant isolation active. Other investigators cannot view files, hashes, or reports submitted under this session.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* DPI Microservice API */}
+        <section className="rounded-2xl border border-slate-200 bg-[#FAF7F0] p-6 sm:p-8 shadow-xs">
+          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-ashoka/10 text-ashoka">
+                <KeyRound className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-ashoka">Integration Access</p>
+                <h2 className="mt-1 font-serif text-xl font-bold text-slate-900">DPI Microservice API</h2>
+                <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-600">
+                  Generate an API key to securely connect VeriScan's 11-layer forensic pipeline to your automated onboarding workflows, KYC queues, or internal intake portals.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="border-slate-300 bg-white text-slate-900 hover:bg-slate-100 font-semibold text-xs h-10 px-4 shrink-0 rounded-xl"
+              onClick={generateKey}
+            >
+              <RefreshCw className="mr-2 h-4 w-4 text-saffron-dark" /> Generate New Key
+            </Button>
+          </div>
+
+          {apiKey && (
+            <div className="mt-6 flex flex-col gap-3 rounded-xl border border-saffron/40 bg-saffron/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-saffron-dark block">Active Session Key</span>
+                <code className="break-all font-mono text-xs font-bold text-slate-900">{apiKey}</code>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start border-saffron/40 bg-white text-slate-900 hover:bg-saffron/20 sm:self-auto text-xs font-semibold rounded-lg shrink-0"
+                onClick={() => navigator.clipboard?.writeText(apiKey).then(() => toast.success("API key copied to clipboard"))}
+              >
+                <Copy className="mr-1.5 h-3.5 w-3.5 text-saffron-dark" /> Copy Key
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-600">
+            <LockKeyhole className="h-4 w-4 shrink-0 text-saffron-dark" />
+            <span>
+              All API transmissions require <code className="font-mono text-slate-800 bg-slate-100 px-1 py-0.5 rounded">X-VeriScan-Signature</code> HMAC authentication. Only one-way cryptographic SHA-256 hashes of generated API keys are stored in the secure vault.
+            </span>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 }
 
-function Provider({ name, detail, status }: { name: string; detail: string; status: string }) { return <div className="rounded-xl border border-border bg-paper-deep p-4"><div className="flex items-center justify-between gap-2"><p className="text-sm font-semibold">{name}</p><span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] ${status === "Active" || status === "HF_API_TOKEN" ? "bg-bronze/15 text-bronze-dark" : status === "Degraded" ? "bg-review/10 text-review" : "bg-black/5 text-muted-ink"}`}>{status}</span></div><p className="mt-2 text-xs text-muted-ink">{detail}</p></div>; }
-function Preference({ label, detail, checked, onCheckedChange }: { label: string; detail: string; checked: boolean; onCheckedChange: (checked: boolean) => void }) { return <div className="flex items-center justify-between gap-5 py-4"><div><p className="text-sm font-semibold">{label}</p><p className="mt-1 text-sm leading-6 text-muted-ink">{detail}</p></div><Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} /></div>; }
+

@@ -6,6 +6,7 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { runForensicAnalysis } from "./forensics";
 import { createChecks, createDocument, finalizeDocument, getUserDocumentReport, listUserDocuments, requestDocumentReview, updateDocumentEvidence } from "./db";
 import { storagePut } from "./storage";
+import { authService } from "./authService";
 
 const documentType = z.enum(["aadhaar", "pan", "passport", "marksheet", "bank_statement", "other"]);
 const allowedMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
@@ -14,6 +15,99 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+    register: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(4, "Password must be at least 4 characters"),
+          name: z.string().min(1, "Name is required"),
+          role: z.enum(["user", "admin"]).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { user, token } = await authService.register(input);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        });
+        return { user, token };
+      }),
+    login: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(1, "Password is required"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { user, token } = await authService.login(input);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        });
+        return { user, token };
+      }),
+    quickLogin: publicProcedure
+      .input(
+        z.object({
+          profile: z.enum(["analyst", "investigator", "auditor"]).default("analyst"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { user, token } = await authService.quickLogin(input.profile);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        });
+        return { user, token };
+      }),
+    sendOtp: publicProcedure
+      .input(
+        z.object({
+          email: z.string().optional(),
+          phone: z.string().optional(),
+        }).refine((data) => Boolean(data.email || data.phone), {
+          message: "Either email or phone number is required",
+        })
+      )
+      .mutation(async ({ input }) => {
+        const identifier = (input.phone || input.email)!.trim();
+        const code = authService.generateOtp(identifier);
+        return {
+          success: true,
+          message: "One-time passcode dispatched via SMS successfully",
+          devCode: code,
+        };
+      }),
+    verifyOtp: publicProcedure
+      .input(
+        z.object({
+          email: z.string().optional(),
+          phone: z.string().optional(),
+          token: z.string().min(4, "Verification token is required"),
+        }).refine((data) => Boolean(data.email || data.phone), {
+          message: "Either email or phone number is required",
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const identifier = (input.phone || input.email)!.trim();
+        const valid = authService.verifyOtpCode(identifier, input.token);
+        if (!valid) {
+          throw new Error("Invalid or expired SMS passcode. Please check and retry.");
+        }
+        const { user, token } = input.phone
+          ? await authService.loginOrCreateWithPhone(input.phone)
+          : await authService.loginOrCreateWithEmail(input.email!);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        });
+        return { user, token };
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

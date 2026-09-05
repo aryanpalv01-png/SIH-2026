@@ -54,7 +54,10 @@ async function startServer() {
         documentType: documentType || "other",
         content: buffer,
       });
-      res.json(analysis);
+      res.json({
+        ...analysis,
+        previewUrl: `data:${mimeType || "image/jpeg"};base64,${contentBase64}`,
+      });
     } catch (err: any) {
       console.error("Direct analysis error:", err);
       res.status(500).json({ error: err?.message || "Internal analysis error" });

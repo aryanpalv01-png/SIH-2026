@@ -1,7 +1,5 @@
-import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { TRPCClientError } from "@trpc/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -9,11 +7,8 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  // Login is started via startLogin() in the effect below, only when we actually
-  // navigate — never during render. startLogin() mints a one-time nonce + writes
-  // the state cookie, so calling it per render would overwrite the cookie and
-  // desync it from an in-flight login's `state`.
-  const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
+  const { redirectOnUnauthenticated = false, redirectPath = "/auth/login" } =
+    options ?? {};
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
@@ -21,13 +16,42 @@ export function useAuth(options?: UseAuthOptions) {
     refetchOnWindowFocus: false,
   });
 
-  const [localUser, setLocalUser] = useState<any>(() => {
-    try {
-      const saved = localStorage.getItem("veriscan_local_user");
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+  const loginMutation = trpc.auth.login.useMutation({
+    onSuccess: (data) => {
+      if (data?.token) {
+        localStorage.setItem("veriscan_auth_token", data.token);
+      }
+      utils.auth.me.setData(undefined, data.user);
+    },
+  });
+
+  const registerMutation = trpc.auth.register.useMutation({
+    onSuccess: (data) => {
+      if (data?.token) {
+        localStorage.setItem("veriscan_auth_token", data.token);
+      }
+      utils.auth.me.setData(undefined, data.user);
+    },
+  });
+
+  const quickLoginMutation = trpc.auth.quickLogin.useMutation({
+    onSuccess: (data) => {
+      if (data?.token) {
+        localStorage.setItem("veriscan_auth_token", data.token);
+      }
+      utils.auth.me.setData(undefined, data.user);
+    },
+  });
+
+  const sendOtpMutation = trpc.auth.sendOtp.useMutation();
+
+  const verifyOtpMutation = trpc.auth.verifyOtp.useMutation({
+    onSuccess: (data) => {
+      if (data?.token) {
+        localStorage.setItem("veriscan_auth_token", data.token);
+      }
+      utils.auth.me.setData(undefined, data.user);
+    },
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({
@@ -36,56 +60,113 @@ export function useAuth(options?: UseAuthOptions) {
     },
   });
 
+  const sendOtp = useCallback(
+    async (params: { email?: string; phone?: string }) => {
+      return await sendOtpMutation.mutateAsync(params);
+    },
+    [sendOtpMutation]
+  );
+
+  const login = useCallback(
+    async (params: { email: string; password: string }) => {
+      const res = await loginMutation.mutateAsync(params);
+      return res.user;
+    },
+    [loginMutation]
+  );
+
+  const verifyOtp = useCallback(
+    async (params: { email?: string; phone?: string; token: string }) => {
+      const res = await verifyOtpMutation.mutateAsync(params);
+      return res.user;
+    },
+    [verifyOtpMutation]
+  );
+
+  const register = useCallback(
+    async (params: { email: string; password: string; name: string }) => {
+      const res = await registerMutation.mutateAsync(params);
+      return res.user;
+    },
+    [registerMutation]
+  );
+
+  const quickLogin = useCallback(
+    async (profile: "analyst" | "investigator" | "auditor" = "analyst") => {
+      const res = await quickLoginMutation.mutateAsync({ profile });
+      return res.user;
+    },
+    [quickLoginMutation]
+  );
+
   const logout = useCallback(async () => {
     try {
       await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
-        // Ignored
-      }
+    } catch {
+      // Ignore network errors
     } finally {
+      // 1. Wipe local and session credentials
+      localStorage.removeItem("veriscan_auth_token");
       localStorage.removeItem("veriscan_local_user");
-      setLocalUser(null);
+      localStorage.removeItem("manus-cookie");
+      localStorage.removeItem("manus-runtime-user-info");
+      sessionStorage.clear();
+
+      // 2. Clear browser cookies directly
+      document.cookie = "app_session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure;";
+      document.cookie = "app_session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+
+      // 3. Clear cache
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
+
+      // 4. Force hard redirect to login
+      window.location.href = "/auth/login";
     }
   }, [logoutMutation, utils]);
 
-  const loginAsDemo = useCallback((customUser?: any) => {
-    const demoUser = customUser || {
-      id: 1,
-      openId: "demo-analyst-001",
-      name: "Institutional Analyst",
-      email: "analyst@veriscan.internal",
-      role: "admin",
-    };
-    localStorage.setItem("veriscan_local_user", JSON.stringify(demoUser));
-    setLocalUser(demoUser);
-    return demoUser;
-  }, []);
+  const loginAsDemo = useCallback(
+    (customUser?: any) => {
+      return quickLogin("analyst");
+    },
+    [quickLogin]
+  );
 
   const state = useMemo(() => {
-    const activeUser = meQuery.data ?? localUser ?? null;
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(activeUser)
-    );
+    const activeUser = meQuery.data ?? null;
     return {
       user: activeUser,
-      loading: meQuery.isLoading && !localUser,
-      error: meQuery.error ?? logoutMutation.error ?? null,
+      loading:
+        meQuery.isLoading ||
+        loginMutation.isPending ||
+        registerMutation.isPending ||
+        quickLoginMutation.isPending ||
+        sendOtpMutation.isPending ||
+        verifyOtpMutation.isPending,
+      error:
+        meQuery.error?.message ||
+        loginMutation.error?.message ||
+        registerMutation.error?.message ||
+        quickLoginMutation.error?.message ||
+        sendOtpMutation.error?.message ||
+        verifyOtpMutation.error?.message ||
+        null,
       isAuthenticated: Boolean(activeUser),
     };
   }, [
     meQuery.data,
     meQuery.error,
     meQuery.isLoading,
-    localUser,
-    logoutMutation.error,
-    logoutMutation.isPending,
+    loginMutation.isPending,
+    loginMutation.error,
+    registerMutation.isPending,
+    registerMutation.error,
+    quickLoginMutation.isPending,
+    quickLoginMutation.error,
+    sendOtpMutation.isPending,
+    sendOtpMutation.error,
+    verifyOtpMutation.isPending,
+    verifyOtpMutation.error,
   ]);
 
   useEffect(() => {
@@ -93,14 +174,9 @@ export function useAuth(options?: UseAuthOptions) {
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
-    if (redirectPath && window.location.pathname === redirectPath) return;
+    if (window.location.pathname.startsWith("/auth")) return;
 
-    // Navigate at this moment only. startLogin() mints the nonce + cookie itself.
-    if (redirectPath) {
-      window.location.href = redirectPath;
-    } else {
-      startLogin();
-    }
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
     redirectPath,
@@ -111,8 +187,13 @@ export function useAuth(options?: UseAuthOptions) {
 
   return {
     ...state,
-    refresh: () => meQuery.refetch(),
-    logout,
+    login,
+    sendOtp,
+    verifyOtp,
+    register,
+    quickLogin,
     loginAsDemo,
+    logout,
+    refresh: () => meQuery.refetch(),
   };
 }

@@ -1,15 +1,42 @@
 import { demoDocuments, VerificationDocument } from "@/lib/veriscan";
 
-const STORAGE_KEY = "veriscan-local-scans";
-
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
-export function readLocalScans(): VerificationDocument[] {
+export function getCurrentUserIdentifier(): string {
+  if (!canUseStorage()) return "guest";
+  try {
+    const token = window.localStorage.getItem("veriscan_auth_token");
+    if (token) {
+      const parts = token.split(".");
+      if (parts[1]) {
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload?.openId) return payload.openId;
+      }
+    }
+    const localUser = window.localStorage.getItem("veriscan_local_user");
+    if (localUser) {
+      const parsed = JSON.parse(localUser);
+      if (parsed?.email) return parsed.email;
+      if (parsed?.openId) return parsed.openId;
+    }
+  } catch {
+    // Ignore decode error
+  }
+  return "guest";
+}
+
+export function getUserStorageKey(userIdentifier?: string): string {
+  const id = userIdentifier || getCurrentUserIdentifier();
+  return `veriscan-scans-${id}`;
+}
+
+export function readUserScans(userIdentifier?: string): VerificationDocument[] {
   if (!canUseStorage()) return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const key = getUserStorageKey(userIdentifier);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as VerificationDocument[];
     return Array.isArray(parsed) ? parsed : [];
@@ -18,15 +45,31 @@ export function readLocalScans(): VerificationDocument[] {
   }
 }
 
-export function writeLocalScan(document: VerificationDocument) {
+export function writeUserScan(document: VerificationDocument, userIdentifier?: string) {
   if (!canUseStorage()) return;
-  const next = [document, ...readLocalScans().filter((item) => item.id !== document.id)].slice(0, 20);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const key = getUserStorageKey(userIdentifier);
+  const current = readUserScans(userIdentifier);
+  const next = [document, ...current.filter((item) => item.id !== document.id)].slice(0, 50);
+  window.localStorage.setItem(key, JSON.stringify(next));
 }
 
-export function getPreviewDocuments() {
-  const local = readLocalScans();
-  return [...local, ...demoDocuments.filter((demo) => !local.some((item) => item.id === demo.id))];
+// Aliases for backward compatibility
+export function readLocalScans(userIdentifier?: string): VerificationDocument[] {
+  return readUserScans(userIdentifier);
+}
+
+export function writeLocalScan(document: VerificationDocument, userIdentifier?: string) {
+  writeUserScan(document, userIdentifier);
+}
+
+export function getPreviewDocuments(userIdentifier?: string): VerificationDocument[] {
+  // Account-scoped: return ONLY the current user's scanned documents
+  const userScans = readUserScans(userIdentifier);
+  return userScans;
+}
+
+export function getDemoSpecimens(): VerificationDocument[] {
+  return demoDocuments;
 }
 
 export function fileToBase64(file: File) {
@@ -41,7 +84,31 @@ export function fileToBase64(file: File) {
   });
 }
 
-export function getPreviewDocument(id?: string) {
+export function getPreviewDocument(id?: string, userIdentifier?: string): VerificationDocument | undefined {
   if (!id) return undefined;
-  return getPreviewDocuments().find((document) => document.id === id);
+
+  // 1. Search current user's scans
+  const userScans = readUserScans(userIdentifier);
+  const found = userScans.find((doc) => doc.id === id);
+  if (found) return found;
+
+  // 2. Search across user scan stores
+  if (canUseStorage()) {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith("veriscan-scans-")) {
+        try {
+          const raw = window.localStorage.getItem(key);
+          if (raw) {
+            const docs = JSON.parse(raw) as VerificationDocument[];
+            const match = docs.find((d) => d.id === id);
+            if (match) return match;
+          }
+        } catch {}
+      }
+    }
+  }
+
+  // 3. Fallback to demo specimen records
+  return demoDocuments.find((document) => document.id === id);
 }

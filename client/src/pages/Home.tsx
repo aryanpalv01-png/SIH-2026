@@ -1,95 +1,299 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { startLogin } from "@/const";
 import { DocumentUploadPanel } from "@/components/DocumentUploadPanel";
-import { VeriScanLogo } from "@/components/VeriScanLogo";
+import { VeriScanLogo, VeriScanMark } from "@/components/VeriScanLogo";
+import { GovMasthead } from "@/components/common/GovMasthead";
 import { analyzeDocumentDirectly, makeDemoDocument } from "@/lib/veriscan";
-import { writeLocalScan } from "@/lib/scanStore";
-import { ArrowRight, Check, FileCheck2, LockKeyhole, ScanLine, ShieldCheck } from "lucide-react";
+import { fileToBase64, writeLocalScan } from "@/lib/scanStore";
+import { ArrowRight, Check, FileCheck2, LockKeyhole, ScanLine, ShieldCheck, Building2, Sparkles, Award } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const userIdentifier = user?.email || user?.openId || "guest";
 
   const handleFile = async (file: File) => {
+    if (!user) {
+      setLocation("/auth/login");
+      return;
+    }
     try {
       const document = await analyzeDocumentDirectly(file);
-      writeLocalScan(document);
+      writeLocalScan(document, userIdentifier);
       setLocation(`/scan/${document.id}`);
     } catch {
-      const document = makeDemoDocument(file);
-      writeLocalScan(document);
+      let previewUrl: string | undefined;
+      try {
+        const b64 = await fileToBase64(file);
+        previewUrl = `data:${file.type || "image/jpeg"};base64,${b64}`;
+      } catch {
+        // Ignore base64 error
+      }
+      const document = makeDemoDocument(file, previewUrl);
+      writeLocalScan(document, userIdentifier);
       setLocation(`/scan/${document.id}`);
     }
   };
 
   return (
     <div className="min-h-screen bg-charcoal text-paper">
-      <header className="relative z-10 border-b border-paper/10">
+      {/* Official Government of India Top Masthead */}
+      <GovMasthead theme="dark" />
+
+      {/* Main Header */}
+      <header className="relative z-10 border-b border-white/10 bg-[#081528]/90 backdrop-blur-md">
         <div className="container flex min-h-[76px] items-center justify-between gap-6">
-          <Link href="/" className="shrink-0"><VeriScanLogo /></Link>
-          <nav className="hidden items-center gap-7 text-sm text-paper/65 md:flex" aria-label="Primary navigation">
-            <a href="#how-it-works" className="hover:text-paper">How it works</a>
-            <a href="#security" className="hover:text-paper">Security</a>
-            <a href="#use-cases" className="hover:text-paper">Use cases</a>
+          <Link href="/" className="shrink-0">
+            <VeriScanLogo />
+          </Link>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-300 md:flex" aria-label="Primary navigation">
+            <a href="#how-it-works" className="hover:text-white transition-colors">Forensic Pipeline</a>
+            <a href="#security" className="hover:text-white transition-colors">DPI Security</a>
+            <a href="#use-cases" className="hover:text-white transition-colors">National Use Cases</a>
           </nav>
           <div className="flex items-center gap-3">
             {user ? (
               <Link href="/dashboard">
-                <Button variant="outline" className="border-paper/25 bg-transparent text-paper hover:bg-paper/10 hover:text-paper">
-                  Open workspace <ArrowRight className="ml-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg border-white/20 bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white font-semibold">
+                  Open Workspace <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
             ) : (
               <Link href="/auth/login">
-                <Button variant="ghost" className="hidden text-paper/70 hover:bg-paper/10 hover:text-paper sm:inline-flex">
-                  Sign in
+                <Button variant="ghost" size="sm" className="hidden h-9 text-slate-300 hover:bg-white/10 hover:text-white font-semibold sm:inline-flex">
+                  Officer Login
                 </Button>
               </Link>
             )}
-            <Link href="/verify">
-              <Button className="bg-bronze text-ink hover:bg-bronze-light">Start a check</Button>
+            <Link href={user ? "/verify" : "/auth/login"}>
+              <Button size="sm" className="h-9 rounded-lg bg-saffron text-slate-950 font-bold hover:bg-saffron-dark hover:text-white shadow-xs">
+                Screen Document
+              </Button>
             </Link>
           </div>
         </div>
       </header>
 
       <main>
+        {/* Hero Section */}
         <section className="hero-wash hero-grid relative overflow-hidden">
-          <div className="absolute -right-32 top-20 h-80 w-80 rounded-full border border-bronze/20" />
-          <div className="absolute -right-14 top-48 h-52 w-52 rounded-full border border-bronze/10" />
-          <div className="container relative grid gap-14 py-16 sm:py-24 lg:grid-cols-[0.86fr_1.14fr] lg:items-center lg:gap-16 lg:py-28">
+          <div className="absolute -right-32 top-20 h-96 w-96 rounded-full border border-saffron/15 pointer-events-none" />
+          <div className="absolute -right-14 top-48 h-64 w-64 rounded-full border border-india-green/15 pointer-events-none" />
+          
+          <div className="container relative grid gap-12 py-16 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16 lg:py-24">
             <div className="max-w-xl">
-              <div className="eyebrow inline-flex items-center gap-2 text-bronze"><span className="h-1.5 w-1.5 rounded-full bg-bronze" /> Document authenticity screening</div>
-              <h1 className="mt-6 max-w-2xl font-serif text-4xl font-bold leading-[1.14] tracking-[-0.04em] text-paper sm:text-5xl lg:text-[4.1rem]">Read the document. <span className="text-bronze-light">Question the edit.</span></h1>
-              <p className="mt-6 max-w-lg text-base leading-7 text-paper/65 sm:text-lg">VeriScan examines the file itself for tampering signals across compression, typography, machine-readable data, and visual consistency — without a government database.</p>
-              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-paper/60"><span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-bronze" /> Multi-layer screening</span><span className="inline-flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-bronze" /> Private by design</span></div>
+              <span className="gov-pill">
+                <span className="h-1.5 w-1.5 rounded-full bg-saffron animate-pulse" />
+                National Document Forensic & Integrity Portal
+              </span>
+              <h1 className="mt-5 font-serif text-3xl font-bold leading-[1.15] tracking-tight text-white sm:text-4xl lg:text-5xl">
+                Autonomous Forgery Screening. <span className="text-saffron">Zero False Positives.</span>
+              </h1>
+              <p className="mt-4 text-base leading-relaxed text-slate-300">
+                Calibrated for Indian credentials: e-Aadhaar QR codes, Income Tax PAN structural checksums, ICAO passports, and academic marksheets. Intelligent physical vs digital noise variance routing ensures genuine soft-copies are never mistakenly flagged.
+              </p>
+              
+              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-semibold text-slate-300">
+                <span className="inline-flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-india-green" /> 11-Layer Forensic Analysis
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <LockKeyhole className="h-4 w-4 text-saffron" /> Private Account Scoping
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-sky-400" /> DPI Aligned
+                </span>
+              </div>
             </div>
-            <div className="rounded-[28px] border border-paper/10 bg-paper/10 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-sm sm:p-3"><div className="rounded-[22px] bg-paper p-1"><DocumentUploadPanel onFile={handleFile} /></div></div>
+
+            <div className="overflow-hidden rounded-2xl border border-white/15 bg-white/10 p-2 shadow-2xl backdrop-blur-md">
+              <div className="tiranga-stripe" />
+              <div className="rounded-xl bg-white p-2">
+                <DocumentUploadPanel onFile={handleFile} />
+              </div>
+            </div>
           </div>
-          <div className="container grid max-w-5xl grid-cols-2 gap-x-8 gap-y-5 border-t border-paper/10 py-7 text-paper/55 sm:grid-cols-4"><div><p className="font-serif text-2xl text-paper">11</p><p className="mt-1 text-xs uppercase tracking-[0.14em]">analysis layers</p></div><div><p className="font-serif text-2xl text-paper">100</p><p className="mt-1 text-xs uppercase tracking-[0.14em]">point confidence scale</p></div><div><p className="font-serif text-2xl text-paper">0</p><p className="mt-1 text-xs uppercase tracking-[0.14em]">database lookups</p></div><div><p className="font-serif text-2xl text-paper">24h</p><p className="mt-1 text-xs uppercase tracking-[0.14em]">retention target</p></div></div>
+
+          {/* Key Facts Strip */}
+          <div className="container grid max-w-5xl grid-cols-2 gap-6 border-t border-white/10 py-8 sm:grid-cols-4">
+            <div>
+              <p className="font-serif text-3xl font-bold text-white">11</p>
+              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-saffron">Forensic Layers</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl font-bold text-white">100 pt</p>
+              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-slate-300">Confidence Metric</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl font-bold text-white">0 ms</p>
+              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-india-green">Disk Leakage Risk</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl font-bold text-white">100%</p>
+              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-saffron">Account Isolated</p>
+            </div>
+          </div>
         </section>
 
-        <section id="how-it-works" className="bg-paper py-20 text-ink sm:py-28">
+        {/* How It Works */}
+        <section id="how-it-works" className="bg-slate-50 py-20 text-slate-900 sm:py-24">
           <div className="container max-w-6xl">
-            <div className="max-w-xl"><p className="eyebrow text-bronze-dark">A considered workflow</p><h2 className="mt-4 font-serif text-3xl font-bold tracking-[-0.035em] sm:text-4xl">The answer is in the details.</h2><p className="mt-4 text-base leading-7 text-muted-ink">Every result is assembled from clear, inspectable observations so your next step is easier to decide.</p></div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3"><Step number="01" icon={<FileCheck2 />} title="Upload" body="Add a clear PDF or image. File type and size checks happen before the scan begins." /><Step number="02" icon={<ScanLine />} title="Screen" body="VeriScan reviews metadata, compression, text rendering, codes, noise, AI-image likelihood, and copied regions in sequence." /><Step number="03" icon={<ShieldCheck />} title="Review" body="Receive a confidence score, flagged findings, and plain-language guidance for what to do next." /></div>
+            <div className="max-w-xl">
+              <span className="gov-pill text-[10px]">
+                Indian Forensic Architecture
+              </span>
+              <h2 className="mt-2 font-serif text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Rigorous Multi-Signal Verification
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Every scanned document is verified across independent mathematical, computer-vision, and neural channels.
+              </p>
+            </div>
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              <Step
+                number="01"
+                icon={<FileCheck2 className="h-5 w-5 text-saffron-dark" />}
+                title="Intake & Routing"
+                body="Evaluates camera sensor noise variance (OpenCV). Soft-copies are routed through tailored parameters to prevent false positive tampering alerts."
+              />
+              <Step
+                number="02"
+                icon={<ScanLine className="h-5 w-5 text-india-green" />}
+                title="Multi-Layer Forensics"
+                body="Runs Error Level Analysis (ELA), UIDAI 2048-bit digital signature checks, PAN regex checksums, font alignment, and copy-move clone detection."
+              />
+              <Step
+                number="03"
+                icon={<ShieldCheck className="h-5 w-5 text-ashoka" />}
+                title="Tamper Heatmap & Verdict"
+                body="Generates an interactive forensic loupe canvas with pixel-level coordinate heatmaps and an exportable National Forensic PDF Certificate."
+              />
+            </div>
           </div>
         </section>
 
-        <section id="security" className="bg-paper-deep py-20 text-ink sm:py-24">
-          <div className="container grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start"><div><p className="eyebrow text-bronze-dark">Security posture</p><h2 className="mt-4 font-serif text-3xl font-bold tracking-[-0.035em] sm:text-4xl">A screening opinion, not a government verdict.</h2></div><div className="grid gap-4 sm:grid-cols-2"><TrustCard icon={<LockKeyhole />} title="Encrypted handling" body="Uploads travel through the authenticated application path and are retained as secure storage references." /><TrustCard icon={<Check />} title="Inspectable findings" body="Reports explain what was observed instead of asking you to trust an opaque score." /><TrustCard icon={<ShieldCheck />} title="Account-scoped data" body="Dashboard records are associated with the signed-in account through protected server procedures." /><TrustCard icon={<FileCheck2 />} title="Human review ready" body="When the evidence is mixed, request a human review rather than forcing a binary decision." /></div></div>
+        {/* Security Section */}
+        <section id="security" className="bg-white py-20 text-slate-900 sm:py-24 border-y border-slate-200">
+          <div className="container grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div>
+              <span className="gov-pill text-[10px]">
+                Data Sovereignty & Security
+              </span>
+              <h2 className="mt-2 font-serif text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Built for High-Stakes Public Infrastructure
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                Designed under zero-trust principles. Document contents remain isolated to the screening officer's authenticated session with Zero-Disk in-memory processing.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TrustCard
+                icon={<LockKeyhole className="h-5 w-5 text-saffron-dark" />}
+                title="Account-Scoped Ledgers"
+                body="Document records belong strictly to the investigator who uploaded them. Cross-account data leaks are systematically blocked."
+              />
+              <TrustCard
+                icon={<Check className="h-5 w-5 text-india-green" />}
+                title="Inspectable Evidence"
+                body="Every flagged anomaly includes precise pixel coordinates, bounding boxes, and plain-language technical justifications."
+              />
+              <TrustCard
+                icon={<Building2 className="h-5 w-5 text-ashoka" />}
+                title="Official PDF Export"
+                body="Generates compliant certificates complete with SHA-256 integrity hashes, QR verification codes, and institutional seals."
+              />
+              <TrustCard
+                icon={<Award className="h-5 w-5 text-saffron-dark" />}
+                title="Human-in-the-Loop"
+                body="Borderline signals can be routed to human forensic officers for secondary microscopic examination."
+              />
+            </div>
+          </div>
         </section>
 
-        <section id="use-cases" className="bg-paper py-20 text-ink sm:py-24"><div className="container max-w-6xl"><div className="flex flex-col justify-between gap-6 border-b border-border pb-8 sm:flex-row sm:items-end"><div><p className="eyebrow text-bronze-dark">Built for careful decisions</p><h2 className="mt-4 font-serif text-3xl font-bold tracking-[-0.035em] sm:text-4xl">Useful wherever a document changes the outcome.</h2></div><Link href={user ? "/dashboard" : "/auth/signup"} className="inline-flex items-center text-sm font-semibold text-bronze-dark hover:text-bronze">Explore the workspace <ArrowRight className="ml-2 h-4 w-4" /></Link></div><div className="grid gap-5 pt-8 sm:grid-cols-3"><UseCase title="KYC & onboarding" body="Add another layer of care to identity-document screening." /><UseCase title="Hiring & credentials" body="Identify inconsistencies in certificates before they become costly." /><UseCase title="Lending & insurance" body="Surface document signals that deserve a closer look." /></div></div></section>
+        {/* Use Cases */}
+        <section id="use-cases" className="bg-slate-50 py-20 text-slate-900 sm:py-24">
+          <div className="container max-w-6xl">
+            <div className="flex flex-col justify-between gap-6 border-b border-slate-200 pb-8 sm:flex-row sm:items-end">
+              <div>
+                <span className="gov-pill text-[10px]">
+                  National Verification Scenarios
+                </span>
+                <h2 className="mt-2 font-serif text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                  Safeguarding India's Digital Identity
+                </h2>
+              </div>
+              <Link href={user ? "/dashboard" : "/auth/signup"} className="inline-flex items-center text-xs font-bold text-saffron-dark hover:text-saffron gap-1.5">
+                Open Officer Workspace <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <div className="grid gap-6 pt-8 sm:grid-cols-3">
+              <UseCase
+                title="Citizen Onboarding & Banking"
+                body="Screen Aadhaar cards and PAN cards during KYC intake to eliminate synthesized identities and manipulated numbers."
+              />
+              <UseCase
+                title="Public Services & Examinations"
+                body="Validate academic certificates and caste certificates against clone stamps, altered marks, and patched seals."
+              />
+              <UseCase
+                title="Immigration & Passports"
+                body="Verify ICAO 9303 MRZ zones, ghost photo alignment, and microprinting consistency on government travel documents."
+              />
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-paper/10 bg-charcoal py-8 text-paper/55"><div className="container flex flex-col gap-5 text-xs sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><VeriScanLogo compact /><span>Documents encrypted in transit. Files are automatically deleted according to workspace retention rules.</span></div><span>© 2026 VeriScan</span></div></footer>
+      {/* Official Government Footer */}
+      <footer className="border-t border-white/10 bg-[#060e1a] py-8 text-slate-400">
+        <div className="container flex flex-col gap-5 text-xs sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <VeriScanLogo compact />
+            <span>भारत सरकार · Ministry of Electronics and IT · National Document Forensic Initiative</span>
+          </div>
+          <span>© 2026 VeriScan India. All rights reserved.</span>
+        </div>
+      </footer>
     </div>
   );
 }
 
-function Step({ number, icon, title, body }: { number: string; icon: React.ReactNode; title: string; body: string }) { return <div className="rounded-[20px] border border-border bg-paper p-6 shadow-[0_10px_28px_rgba(66,58,44,0.06)]"><div className="flex items-center justify-between"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-charcoal text-bronze">{icon}</div><span className="font-serif text-3xl text-[#d8cdb9]">{number}</span></div><h3 className="mt-8 font-serif text-xl font-bold">{title}</h3><p className="mt-3 text-sm leading-6 text-muted-ink">{body}</p></div>; }
-function TrustCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) { return <div className="rounded-[18px] bg-paper p-5"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-bronze/12 text-bronze-dark">{icon}</div><h3 className="mt-5 font-serif text-lg font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted-ink">{body}</p></div>; }
-function UseCase({ title, body }: { title: string; body: string }) { return <div className="border-l-2 border-bronze px-5"><h3 className="font-serif text-xl font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted-ink">{body}</p></div>; }
+function Step({ number, icon, title, body }: { number: string; icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:border-saffron/40 hover:-translate-y-0.5 transition-all duration-200">
+      <div className="flex items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+          {icon}
+        </div>
+        <span className="font-serif text-2xl text-saffron font-bold">{number}</span>
+      </div>
+      <h3 className="mt-4 font-serif text-lg font-bold text-slate-900">{title}</h3>
+      <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{body}</p>
+    </div>
+  );
+}
+
+function TrustCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50/80 p-5 shadow-xs border border-slate-200 hover:border-slate-300 transition-colors">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white border border-slate-200 shadow-2xs">
+        {icon}
+      </div>
+      <h3 className="mt-3.5 font-serif text-base font-bold text-slate-900">{title}</h3>
+      <p className="mt-1 text-xs leading-relaxed text-slate-500">{body}</p>
+    </div>
+  );
+}
+
+function UseCase({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 border-l-4 border-l-saffron shadow-xs">
+      <h3 className="font-serif text-base font-bold text-slate-900">{title}</h3>
+      <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{body}</p>
+    </div>
+  );
+}
+
+

@@ -30,6 +30,7 @@ export type VerificationDocument = {
   fileSize: string;
   mimeType: string;
   reference: string;
+  previewUrl?: string;
   checks: VerificationCheck[];
   providerHealth?: Record<string, "healthy" | "not_configured" | "not_applicable" | "degraded">;
   extractedFields?: Record<string, string>;
@@ -547,6 +548,7 @@ export type ServerDocumentRecord = {
   status: "processing" | DocumentStatus;
   confidenceScore: number;
   referenceCode: string;
+  fileUrl?: string | null;
   providerHealth?: unknown;
   extractedFields?: unknown;
   comparisonFindings?: unknown;
@@ -612,6 +614,7 @@ export function serverDocumentToVerification(document: ServerDocumentRecord, che
     fileSize: `${Math.max(0.1, document.fileSize / 1024 / 1024).toFixed(1)} MB`,
     mimeType: document.mimeType,
     reference: document.referenceCode,
+    previewUrl: document.fileUrl || (document as any).file_url || (document as any).previewUrl || undefined,
     providerHealth: isProviderHealth(document.providerHealth) ? document.providerHealth : undefined,
     extractedFields: isStringRecord(document.extractedFields) ? document.extractedFields : undefined,
     comparisonFindings: Array.isArray(document.comparisonFindings) ? document.comparisonFindings.filter((item): item is string => typeof item === "string") : undefined,
@@ -684,7 +687,7 @@ export function getInitials(name?: string | null) {
   return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "VS";
 }
 
-export function makeDemoDocument(file: File): VerificationDocument {
+export function makeDemoDocument(file: File, previewUrl?: string): VerificationDocument {
   const id = `scan-${Date.now()}`;
   const name = file.name.toLowerCase();
   const isSuspicious = /(fake|forged|forgery|tamper|sample|specimen|dummy|photoshop|canva|invalid|fail|spliced)/i.test(name);
@@ -717,21 +720,23 @@ export function makeDemoDocument(file: File): VerificationDocument {
     fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
     mimeType: file.type || "application/octet-stream",
     reference: `VS-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+    previewUrl,
     checks,
   };
 }
 
 export async function analyzeDocumentDirectly(file: File): Promise<VerificationDocument> {
-  const base64 = await new Promise<string>((resolve, reject) => {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const result = reader.result as string;
-      const comma = result.indexOf(",");
-      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      resolve(typeof reader.result === "string" ? reader.result : "");
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+  const comma = dataUrl.indexOf(",");
+  const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
 
   const docType: DocumentKind = file.name.toLowerCase().includes("aadhaar")
     ? "aadhaar"
@@ -782,6 +787,7 @@ export async function analyzeDocumentDirectly(file: File): Promise<VerificationD
     fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
     mimeType: file.type || "image/jpeg",
     reference: `VS-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+    previewUrl: data.previewUrl || dataUrl,
     checks: checks.length ? checks : demoDocuments[status === "likely_forged" ? 2 : status === "needs_review" ? 1 : 0].checks,
     extractedFields: data.extractedFields || data.extracted_fields,
     comparisonFindings: data.comparisonFindings,

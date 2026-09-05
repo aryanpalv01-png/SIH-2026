@@ -57,9 +57,38 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+// In-memory fallbacks when PostgreSQL database is not connected
+const inMemoryDocuments: Array<any> = [];
+const inMemoryChecks: Array<any> = [];
+const inMemoryReviews: Array<any> = [];
+let inMemoryDocId = 1000;
+let inMemoryCheckId = 1000;
+let inMemoryReviewId = 1000;
+
 export async function createDocument(document: InsertDocument) {
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const doc = {
+      id: inMemoryDocId++,
+      userId: document.userId,
+      fileName: (document as any).originalFilename || (document as any).fileName || "Document",
+      storageKey: (document as any).fileKey || (document as any).storageKey || "",
+      mimeType: document.mimeType,
+      fileSize: document.fileSize,
+      documentType: document.documentType,
+      sha256Hash: (document as any).referenceCode || (document as any).sha256Hash || "",
+      status: document.status ?? "verified",
+      confidenceScore: document.confidenceScore ?? 85,
+      providerHealth: null,
+      extractedFields: null,
+      comparisonFindings: null,
+      uploadedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    inMemoryDocuments.push(doc);
+    return doc;
+  }
   const result = await db.insert(documents).values(document);
   const insertId = Number((result as unknown as Array<{ insertId: number }>)[0]?.insertId);
   const created = await db.select().from(documents).where(eq(documents.id, insertId)).limit(1);
@@ -68,13 +97,30 @@ export async function createDocument(document: InsertDocument) {
 
 export async function finalizeDocument(documentId: number, userId: number, status: "verified" | "needs_review" | "likely_forged", confidenceScore: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const found = inMemoryDocuments.find((d) => d.id === documentId && d.userId === userId);
+    if (found) {
+      found.status = status;
+      found.confidenceScore = confidenceScore;
+      found.updatedAt = new Date();
+    }
+    return;
+  }
   await db.update(documents).set({ status, confidenceScore, updatedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
 }
 
 export async function updateDocumentEvidence(documentId: number, userId: number, evidence: { providerHealth: unknown; extractedFields: unknown; comparisonFindings: unknown }) {
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const found = inMemoryDocuments.find((d) => d.id === documentId && d.userId === userId);
+    if (found) {
+      found.providerHealth = evidence.providerHealth;
+      found.extractedFields = evidence.extractedFields;
+      found.comparisonFindings = evidence.comparisonFindings;
+      found.updatedAt = new Date();
+    }
+    return;
+  }
   await db.update(documents).set({ providerHealth: evidence.providerHealth, extractedFields: evidence.extractedFields, comparisonFindings: evidence.comparisonFindings, updatedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
 }
 
@@ -95,7 +141,30 @@ export async function applyWebhookAnalysis(documentId: number, result: {
   comparisonFindings?: unknown;
 }) {
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const doc = inMemoryDocuments.find((d) => d.id === documentId);
+    if (doc) {
+      doc.status = result.status;
+      doc.confidenceScore = result.confidenceScore;
+      if (result.providerHealth !== undefined) doc.providerHealth = result.providerHealth;
+      if (result.extractedFields !== undefined) doc.extractedFields = result.extractedFields;
+      if (result.comparisonFindings !== undefined) doc.comparisonFindings = result.comparisonFindings;
+      doc.updatedAt = new Date();
+    }
+    if (result.checks?.length) {
+      await createChecks(result.checks.map((check) => ({
+        documentId,
+        checkName: check.checkName,
+        result: check.result,
+        confidence: check.confidence,
+        explanation: check.explanation,
+        flaggedRegion: check.flaggedRegion ?? null,
+        provider: check.provider ?? "n8n",
+        providerState: check.providerState ?? "active",
+      })));
+    }
+    return;
+  }
   await db.update(documents).set({
     status: result.status,
     confidenceScore: result.confidenceScore,
@@ -120,19 +189,35 @@ export async function applyWebhookAnalysis(documentId: number, result: {
 
 export async function createChecks(rows: Array<typeof checks.$inferInsert>) {
   const db = await getDb();
-  if (!db || rows.length === 0) return;
+  if (!db) {
+    for (const row of rows) {
+      inMemoryChecks.push({ ...row, id: inMemoryCheckId++ });
+    }
+    return;
+  }
+  if (rows.length === 0) return;
   await db.insert(checks).values(rows);
 }
 
 export async function listUserDocuments(userId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    return inMemoryDocuments
+      .filter((d) => d.userId === userId)
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  }
   return db.select().from(documents).where(eq(documents.userId, userId)).orderBy(desc(documents.uploadedAt));
 }
 
 export async function getUserDocumentReport(documentId: number, userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) {
+    const document = inMemoryDocuments.find((d) => d.id === documentId && d.userId === userId);
+    if (!document) return undefined;
+    const checkRows = inMemoryChecks.filter((c) => c.documentId === documentId);
+    const reviewRows = inMemoryReviews.filter((r) => r.documentId === documentId);
+    return { document, checks: checkRows, review: reviewRows[0] };
+  }
   const documentRows = await db.select().from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId))).limit(1);
   const document = documentRows[0];
   if (!document) return undefined;
@@ -143,7 +228,15 @@ export async function getUserDocumentReport(documentId: number, userId: number) 
 
 export async function requestDocumentReview(documentId: number, userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database is not available");
+  if (!db) {
+    const document = inMemoryDocuments.find((d) => d.id === documentId && d.userId === userId);
+    if (!document) return undefined;
+    const existing = inMemoryReviews.find((r) => r.documentId === documentId && r.status === "pending");
+    if (existing) return existing;
+    const review = { id: inMemoryReviewId++, documentId, status: "pending", createdAt: new Date() };
+    inMemoryReviews.push(review);
+    return review;
+  }
   const owned = await db.select({ id: documents.id }).from(documents).where(and(eq(documents.id, documentId), eq(documents.userId, userId))).limit(1);
   if (!owned[0]) return undefined;
   const existing = await db.select().from(reviews).where(and(eq(reviews.documentId, documentId), eq(reviews.status, "pending"))).limit(1);

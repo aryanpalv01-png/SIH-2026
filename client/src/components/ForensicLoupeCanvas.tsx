@@ -41,6 +41,7 @@ export function ForensicLoupeCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const actualPreview = document.previewUrl || (document as any).fileUrl || (document as any).file_url;
   const flaggedChecks = document.checks.filter(
     (c) => c.flaggedRegion && c.result === "flag"
   );
@@ -311,67 +312,36 @@ export function ForensicLoupeCanvas({
         }`}
       >
         {/* Base Document Rendering */}
-        <div className="relative h-full w-full flex flex-col justify-between">
-          {/* Header */}
-          <div className="flex items-start justify-between border-b border-[#cfc4af] pb-2.5">
-            <div>
-              <div className="h-2.5 w-32 rounded-full bg-[#464743]/80" />
-              <div className="mt-2 h-1.5 w-24 rounded-full bg-[#8c8576]/60" />
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded border border-[#8c8576]/40 text-[10px] font-bold text-[#8c8576]">
-              {document.type.slice(0, 3).toUpperCase()}
-            </div>
+        {actualPreview ? (
+          <div className="relative h-full w-full flex items-center justify-center overflow-hidden rounded-lg">
+            <img
+              src={actualPreview}
+              alt={document.filename}
+              crossOrigin="anonymous"
+              className="h-full w-full object-contain select-none pointer-events-none"
+            />
           </div>
-
-          {/* Middle Content */}
-          <div className="grid grid-cols-[0.68fr_1fr] gap-4 py-2">
-            {/* Photo / Portrait placeholder */}
-            <div className="rounded border border-[#d6cbb8] bg-[#e8dfce] p-2.5 shadow-inner">
-              <div className="mx-auto aspect-[0.84/1] max-w-[85px] rounded bg-[#bbb1a1] overflow-hidden relative">
-                <div className="mx-auto mt-3 h-7 w-7 rounded-full bg-[#ece3d4]" />
-                <div className="mx-auto mt-2 h-12 w-10 rounded-t-full bg-[#dfd4c2]" />
-                {activeLayer === "ela" && (
-                  <div className="absolute inset-0 bg-red-500/20 mix-blend-color-burn" />
-                )}
-              </div>
+        ) : (
+          <div className="relative h-full w-full flex flex-col items-center justify-center p-6 text-center bg-slate-50/80 rounded-lg">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-saffron/10 text-saffron-dark mb-2">
+              <Crosshair className="h-6 w-6" />
             </div>
-
-            {/* Document Field Text Placeholders */}
-            <div className="space-y-2.5 pt-1">
-              <div>
-                <div className="h-1.5 w-14 rounded-full bg-[#9d9587]/70" />
-                <div className="mt-1.5 h-2 w-36 rounded-full bg-[#464743]/85" />
-              </div>
-              <div>
-                <div className="h-1.5 w-18 rounded-full bg-[#9d9587]/70" />
-                <div className="mt-1.5 h-2 w-28 rounded-full bg-[#464743]/65" />
-              </div>
-              <div>
-                <div className="h-1.5 w-12 rounded-full bg-[#9d9587]/70" />
-                <div className="mt-1.5 h-2 w-44 rounded-full bg-[#464743]/65" />
-              </div>
-              <div>
-                <div className="h-1.5 w-20 rounded-full bg-[#9d9587]/70" />
-                <div className="mt-1.5 h-2 w-28 rounded-full bg-[#464743]/65" />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Identifier Strip */}
-          <div className="mt-2 flex items-center justify-between border-t border-[#d8cfbd] pt-2 text-[10px] text-[#8c8576]">
-            <span className="font-mono">{document.reference}</span>
-            <span className="uppercase tracking-widest font-semibold text-[9px]">
-              Forensic Audit Trace
+            <p className="text-xs font-bold text-slate-900">{document.filename}</p>
+            <p className="mt-1 text-[11px] text-slate-500 max-w-xs">
+              Document Visual Inspection Active. Sensor & pixel layers loaded.
+            </p>
+            <span className="mt-2 font-mono text-[10px] text-slate-400">
+              Ref: {document.reference}
             </span>
           </div>
-        </div>
+        )}
 
         {/* Dynamic Canvas for Visualizer Overlays */}
         <canvas
           ref={canvasRef}
           width={620}
           height={420}
-          className="absolute inset-0 pointer-events-none w-full h-full"
+          className="absolute inset-0 pointer-events-none w-full h-full z-10"
         />
 
         {/* Bounding Boxes for Flagged Areas */}
@@ -399,7 +369,7 @@ export function ForensicLoupeCanvas({
                 }}
               >
                 {/* Tag pill */}
-                <div className="absolute -top-3 left-1 bg-forged text-paper text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1">
+                <div className="absolute -top-3.5 left-1 bg-forged text-paper text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 z-30">
                   <AlertTriangle className="h-2.5 w-2.5" />
                   FLAG #{idx + 1}
                 </div>
@@ -426,19 +396,21 @@ export function ForensicLoupeCanvas({
               }}
             >
               {/* Duplicate Document layer under loupe */}
-              <div className="p-5">
-                <div className="border-b border-[#cfc4af] pb-2">
-                  <div className="h-2.5 w-32 rounded-full bg-[#464743]" />
+              {actualPreview ? (
+                <div className="relative w-full h-full flex items-center justify-center p-2">
+                  <img
+                    src={actualPreview}
+                    alt={document.filename}
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-contain pointer-events-none select-none"
+                  />
                 </div>
-                <div className="grid grid-cols-[0.68fr_1fr] gap-4 py-2">
-                  <div className="aspect-[0.84/1] max-w-[85px] rounded bg-[#bbb1a1]" />
-                  <div className="space-y-2 pt-1">
-                    <div className="h-2 w-36 rounded-full bg-[#464743]" />
-                    <div className="h-2 w-28 rounded-full bg-[#464743]" />
-                    <div className="h-2 w-44 rounded-full bg-[#464743]" />
-                  </div>
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center p-6 text-center bg-slate-100">
+                  <p className="text-xs font-bold text-slate-800">{document.filename}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">Magnified in-memory secure stream</p>
                 </div>
-              </div>
+              )}
 
               {/* Sub-pixel grain grid under 8x */}
               {loupeZoom >= 4 && (
