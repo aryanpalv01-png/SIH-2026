@@ -827,6 +827,11 @@ def run_lightweight_pipeline(file_bytes: bytes, explicit_doc_type: str | None = 
         gc.collect()
 
 
+@app.get("/")
+async def root():
+    return {"status": "online", "service": "VeriScan Fast Check API", "message": "System is operational."}
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {
