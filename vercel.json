@@ -1,4 +1,3 @@
 {
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "rootDirectory": "SIH-2026"
+  "installCommand": "pnpm install --no-frozen-lockfile"
 }
