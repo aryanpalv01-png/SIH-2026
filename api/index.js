@@ -898,8 +898,8 @@ function getQueryParam(req, key) {
   const value = req.query[key];
   return typeof value === "string" ? value : void 0;
 }
-function registerOAuthRoutes(app2) {
-  app2.get("/api/oauth/callback", async (req, res) => {
+function registerOAuthRoutes(app) {
+  app.get("/api/oauth/callback", async (req, res) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");
     if (!code || !state) {
@@ -942,8 +942,8 @@ function registerOAuthRoutes(app2) {
 }
 
 // server/_core/storageProxy.ts
-function registerStorageProxy(app2) {
-  app2.get("/manus-storage/*", async (req, res) => {
+function registerStorageProxy(app) {
+  app.get("/manus-storage/*", async (req, res) => {
     const key = req.params[0];
     if (!key) {
       res.status(400).send("Missing storage key");
@@ -1628,15 +1628,15 @@ async function createContext(opts) {
 
 // server/app.ts
 function createApp() {
-  const app2 = express();
-  app2.use(express.json({ limit: "50mb" }));
-  app2.use("/uploads", express.static(path2.resolve(process.cwd(), "uploads")));
-  registerStorageProxy(app2);
-  registerOAuthRoutes(app2);
-  app2.get(["/health", "/api/health"], (_req, res) => {
+  const app = express();
+  app.use(express.json({ limit: "50mb" }));
+  app.use("/uploads", express.static(path2.resolve(process.cwd(), "uploads")));
+  registerStorageProxy(app);
+  registerOAuthRoutes(app);
+  app.get(["/health", "/api/health"], (_req, res) => {
     res.status(200).json({ status: "healthy", service: "veriscan-node-server" });
   });
-  app2.post("/api/analyze-direct", async (req, res) => {
+  app.post("/api/analyze-direct", async (req, res) => {
     try {
       const { fileName, mimeType, fileSize, documentType: documentType2, contentBase64 } = req.body;
       if (!contentBase64) {
@@ -1660,19 +1660,18 @@ function createApp() {
       res.status(500).json({ error: err?.message || "Internal analysis error" });
     }
   });
-  app2.use(
+  app.use(
     "/api/trpc",
     createExpressMiddleware({
       router: appRouter,
       createContext
     })
   );
-  return app2;
+  return app;
 }
-
-// api/index.ts
-var app = createApp();
-var index_default = app;
+var defaultApp = createApp();
+var app_default = defaultApp;
 export {
-  index_default as default
+  createApp,
+  app_default as default
 };
