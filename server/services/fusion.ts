@@ -63,6 +63,44 @@ export const HEURISTIC_CHECKS = new Set([
 ]);
 
 /**
+ * Detects whether a forensic module check represents an offline, uninitialized,
+ * errored, or missing-weights state (e.g. TruFor or CAT-Net returning 503, 501,
+ * missing local weights, or null values).
+ */
+export function isModuleOfflineOrUninitialized(c: any): boolean {
+  if (!c) return true;
+  if (c.result === "not_applicable" || c.available === false) return true;
+  if (c.result === "error") return true;
+  if (c.confidence === null || c.confidence === undefined || Number.isNaN(Number(c.confidence))) return true;
+  if (c.status === 503 || c.status === 501 || c.statusCode === 503 || c.statusCode === 501) return true;
+  if (c.error || c.uninitialized || c.missingWeights || c.offline) return true;
+
+  const expl = typeof c.explanation === "string" ? c.explanation.toLowerCase() : "";
+  const isOfflineMention =
+    expl.includes("503") ||
+    expl.includes("501") ||
+    expl.includes("missing weight") ||
+    expl.includes("weights missing") ||
+    expl.includes("missing local weight") ||
+    expl.includes("checkpoint is not configured") ||
+    expl.includes("missing checkpoint") ||
+    expl.includes("uninitialized") ||
+    expl.includes("service unavailable") ||
+    expl.includes("offline") ||
+    expl.includes("not configured") ||
+    expl.includes("excluded from scoring") ||
+    expl.includes("signal was excluded") ||
+    expl.includes("could not be completed") ||
+    expl.includes("neutral score") ||
+    expl.includes("neutral fallback") ||
+    expl.includes("fallback to neutral");
+
+  if (isOfflineMention) return true;
+
+  return false;
+}
+
+/**
  * VeriScan Institutional Score Fusion Engine:
  * Combines granular forensic observations into a transparent Tamper Confidence Score (0–100).
  *
@@ -72,8 +110,25 @@ export const HEURISTIC_CHECKS = new Set([
  *    failing simultaneously trigger "Likely Forged" (< 40).
  * 3. Clean, high-resolution genuine documents are protected from getting dragged into "Needs Review"
  *    due to minor compression variations.
+ * 4. Offline/Uninitialized Models: If optional models (like TruFor or CAT-Net) return errors, 503, 501,
+ *    or null values due to missing local weights, explicitly assign them a status of "not_applicable"
+ *    with zero weight in the average. Do NOT fall back to a neutral score of 50.
+ * 5. Clean Separation: Uninitialized or missing optional models do not artificially inflate fake
+ *    document scores or deflate genuine document scores.
  */
 export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult {
+  // 0. Handle Offline/Uninitialized Models:
+  // If forensic modules return errors, 503, 501, or null values due to missing local weights,
+  // explicitly assign them a status of "not_applicable" with zero weight in the average.
+  // Do NOT fall back to a neutral score of 50.
+  for (const c of checks) {
+    if (isModuleOfflineOrUninitialized(c)) {
+      c.result = "not_applicable";
+      c.confidence = 0;
+      c.available = false;
+    }
+  }
+
   const active = checks.filter((item) => item.result !== "not_applicable");
   if (!active.length) {
     return {
@@ -110,7 +165,7 @@ export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult
   const isCumulativeHeuristicFail = tierBFailures.length >= 2;
   const isSingleHeuristicFail = tierBFailures.length === 1;
 
-  // 3. Compute Base Weighted Score
+  // 3. Compute Base Weighted Score (Offline/uninitialized models have 0 weight as they are not in active)
   let totalWeight = 0;
   let weightedSum = 0;
 

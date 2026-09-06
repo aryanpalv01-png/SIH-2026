@@ -133,4 +133,77 @@ describe("forensic module contracts", () => {
     expect(result.providers.trufor).toBe("not_configured");
     expect(result.providerHealth.ocr).toBe("not_configured");
   });
+
+  it("handles offline/uninitialized models (503, 501, missing weights, null values) as not_applicable with zero weight (no neutral 50 fallback)", () => {
+    const checks: any[] = [
+      { checkName: "checksum_identifier_validation", result: "pass", confidence: 98, explanation: "Verhoeff check passed", provider: "local", available: true },
+      { checkName: "qr_signature_verification", result: "pass", confidence: 96, explanation: "Valid digital signature", provider: "local", available: true },
+      { checkName: "ocr_typography_consistency", result: "pass", confidence: 92, explanation: "Consistent rendering", provider: "ocr", available: true },
+      // Offline / uninitialized / missing weights models
+      { checkName: "trufor_inference", result: "flag", confidence: 50, explanation: "TruFor inference returned 503; signal was excluded", provider: "trufor", available: false, status: 503 },
+      { checkName: "catnet_inference", result: "pass", confidence: null, explanation: "CAT-Net pretrained model checkpoint is not configured. Missing local weights.", provider: "catnet", available: false },
+    ];
+
+    const result = fuseForensicChecks(checks);
+
+    // TruFor and CAT-Net must be explicitly assigned "not_applicable" with 0 confidence
+    const trufor = checks.find((c) => c.checkName === "trufor_inference");
+    const catnet = checks.find((c) => c.checkName === "catnet_inference");
+    expect(trufor.result).toBe("not_applicable");
+    expect(trufor.confidence).toBe(0);
+    expect(catnet.result).toBe("not_applicable");
+    expect(catnet.confidence).toBe(0);
+
+    // Must not fall back to 50 or include uninitialized weights in the average
+    // Active weights: checksum (3.5 * 98) + qr (3.5 * 96) + ocr (1.5 * 92) = 343 + 336 + 138 = 817 / 8.5 = 96.1
+    expect(result.score).toBeGreaterThanOrEqual(95);
+    expect(result.status).toBe("verified");
+    expect(result.tierAFailures.length).toBe(0);
+    expect(result.tierBFailures.length).toBe(0);
+  });
+
+  it("ensures clean separation: uninitialized optional models do not deflate genuine document scores into Needs Review", () => {
+    // Genuine document evaluated with active checks only
+    const genuineOnlyResult = fuseForensicChecks([
+      { checkName: "checksum_identifier_validation", result: "pass", confidence: 96, explanation: "Checksum valid", provider: "local", available: true },
+      { checkName: "qr_signature_verification", result: "pass", confidence: 94, explanation: "Signature authentic", provider: "local", available: true },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 90, explanation: "Clean metadata", provider: "local", available: true },
+    ]);
+
+    // Same genuine document with uninitialized TruFor (503) and CAT-Net (501 / missing weights)
+    const withUninitializedResult = fuseForensicChecks([
+      { checkName: "checksum_identifier_validation", result: "pass", confidence: 96, explanation: "Checksum valid", provider: "local", available: true },
+      { checkName: "qr_signature_verification", result: "pass", confidence: 94, explanation: "Signature authentic", provider: "local", available: true },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 90, explanation: "Clean metadata", provider: "local", available: true },
+      { checkName: "trufor_inference", result: "not_applicable", confidence: 0, explanation: "TruFor inference returned 503; signal excluded from scoring", provider: "trufor", available: false },
+      { checkName: "catnet_inference", result: "not_applicable", confidence: 0, explanation: "CAT-Net 501 missing local weights", provider: "catnet", available: false },
+    ]);
+
+    // Genuine document score must NOT be deflated
+    expect(withUninitializedResult.score).toBe(genuineOnlyResult.score);
+    expect(withUninitializedResult.status).toBe("verified");
+  });
+
+  it("ensures clean separation: uninitialized optional models do not artificially inflate fake document scores", () => {
+    // Forged document with cumulative heuristic failures (font + screenshot + ELA)
+    const fakeOnlyResult = fuseForensicChecks([
+      { checkName: "ocr_typography_consistency", result: "flag", confidence: 25, explanation: "Mismatched font weight", provider: "ocr", available: true },
+      { checkName: "screenshot_capture_detection", result: "flag", confidence: 20, explanation: "Screen capture detected", provider: "local", available: true },
+      { checkName: "ela_compression_analysis", result: "flag", confidence: 30, explanation: "Localized recompression discrepancy", provider: "local", available: true },
+    ]);
+
+    // Same forged document with missing/offline TruFor & CAT-Net
+    const withUninitializedResult = fuseForensicChecks([
+      { checkName: "ocr_typography_consistency", result: "flag", confidence: 25, explanation: "Mismatched font weight", provider: "ocr", available: true },
+      { checkName: "screenshot_capture_detection", result: "flag", confidence: 20, explanation: "Screen capture detected", provider: "local", available: true },
+      { checkName: "ela_compression_analysis", result: "flag", confidence: 30, explanation: "Localized recompression discrepancy", provider: "local", available: true },
+      { checkName: "trufor_inference", result: "not_applicable", confidence: 0, explanation: "TruFor offline", provider: "trufor", available: false },
+      { checkName: "catnet_inference", result: "not_applicable", confidence: 0, explanation: "CAT-Net uninitialized", provider: "catnet", available: false },
+    ]);
+
+    // Fake document score must remain < 40 ("likely_forged") and not be inflated towards 50
+    expect(withUninitializedResult.score).toBeLessThan(40);
+    expect(withUninitializedResult.status).toBe("likely_forged");
+    expect(withUninitializedResult.score).toBe(fakeOnlyResult.score);
+  });
 });

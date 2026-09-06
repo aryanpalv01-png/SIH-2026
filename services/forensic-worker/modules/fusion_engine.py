@@ -19,6 +19,32 @@ DETERMINISTIC_CHECKS = {"checksum_validation", "qr_signature_verification"}
 
 
 def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
+    # Normalize offline, uninitialized, 503/501, or null-value checks to not_applicable
+    for c in checks:
+        result = c.get("result")
+        conf = c.get("confidence")
+        expl = str(c.get("explanation", "")).lower()
+        status_code = c.get("status")
+
+        is_offline = (
+            result in ("not_applicable", "error")
+            or conf is None
+            or status_code in (501, 503)
+            or "503" in expl
+            or "501" in expl
+            or "missing weight" in expl
+            or "weights missing" in expl
+            or "not configured" in expl
+            or "uninitialized" in expl
+            or "offline" in expl
+            or "neutral score" in expl
+            or "fallback to neutral" in expl
+        )
+        if is_offline:
+            c["result"] = "not_applicable"
+            c["confidence"] = 0
+            c["available"] = False
+
     active_checks = [c for c in checks if c.get("result") != "not_applicable"]
 
     if not active_checks:
@@ -41,7 +67,7 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
         c for c in active_checks
         if (
             (c.get("checkName") in DETERMINISTIC_CHECKS and c.get("result") == "flag")
-            or (c.get("checkName") == "ocr_typography_consistency" and c.get("result") == "flag" and float(c.get("confidence", 50)) <= 10)
+            or (c.get("checkName") == "ocr_typography_consistency" and c.get("result") == "flag" and float(c.get("confidence", 0)) <= 10)
         )
     ]
     has_hard_fail = len(hard_failed_checks) > 0
@@ -52,7 +78,7 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
     for c in active_checks:
         name = c.get("checkName", "")
         weight = CHECK_WEIGHTS.get(name, 1.0)
-        conf = float(c.get("confidence", 50))
+        conf = float(c.get("confidence", 0))
         total_weight += weight
         weighted_sum += conf * weight
 

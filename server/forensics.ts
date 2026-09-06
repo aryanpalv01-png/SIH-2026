@@ -273,9 +273,55 @@ async function callExternalAdapter(name: "trufor" | "catnet", input: ForensicInp
   try {
     const response = await fetch(url, { method: "POST", headers: { "Content-Type": input.mimeType }, body: input.content as unknown as BodyInit, signal: AbortSignal.timeout(20_000) });
     if (!response.ok) return check(`${name}_inference`, "not_applicable", 0, `${name} inference returned ${response.status}; this provider signal was excluded from scoring.`, name);
-    const payload = await response.json() as { integrityScore?: number; tamperProbability?: number; reliability?: number };
-    const integrity = Math.max(0, Math.min(100, Math.round((payload.integrityScore ?? (1 - (payload.tamperProbability ?? 1)) ) * 100)));
-    return check(`${name}_inference`, integrity < 40 ? "flag" : "pass", integrity, `${name} adapter returned an integrity score of ${integrity}/100 with reliability ${Math.round((payload.reliability ?? 0) * 100)}/100.`, name);
+    const payload = await response.json() as {
+      integrityScore?: number | null;
+      tamperProbability?: number | null;
+      reliability?: number | null;
+      result?: AnalysisResult;
+      confidence?: number | null;
+      explanation?: string;
+      status?: number;
+      error?: string;
+    };
+
+    // If model returned errors, 503, 501, or null values due to missing local weights,
+    // explicitly assign status "not_applicable" with 0 confidence (do NOT fall back to neutral 50).
+    if (
+      payload.result === "not_applicable" ||
+      payload.status === 501 ||
+      payload.status === 503 ||
+      Boolean(payload.error) ||
+      (payload.integrityScore == null && payload.tamperProbability == null && payload.confidence == null)
+    ) {
+      return check(
+        `${name}_inference`,
+        "not_applicable",
+        0,
+        payload.explanation || `${name === "trufor" ? "TruFor" : "CAT-Net"} model runtime is uninitialized or missing local weights; signal excluded from scoring.`,
+        name
+      );
+    }
+
+    const rawIntegrity = payload.integrityScore != null
+      ? payload.integrityScore
+      : payload.tamperProbability != null
+      ? 1 - payload.tamperProbability
+      : typeof payload.confidence === "number"
+      ? payload.confidence / 100
+      : null;
+
+    if (rawIntegrity == null || Number.isNaN(rawIntegrity)) {
+      return check(`${name}_inference`, "not_applicable", 0, `${name} did not return valid numeric integrity values; signal excluded from scoring.`, name);
+    }
+
+    const integrity = Math.max(0, Math.min(100, Math.round(rawIntegrity * (rawIntegrity <= 1 ? 100 : 1))));
+    return check(
+      `${name}_inference`,
+      integrity < 40 ? "flag" : "pass",
+      integrity,
+      payload.explanation || `${name} adapter returned an integrity score of ${integrity}/100 with reliability ${Math.round((payload.reliability ?? 0.8) * 100)}/100.`,
+      name
+    );
   } catch { return check(`${name}_inference`, "not_applicable", 0, `${name} inference was unavailable; this provider signal was excluded from scoring.`, name); }
 }
 
@@ -371,9 +417,10 @@ export async function runForensicAnalysis(input: ForensicInput): Promise<Forensi
           catnet: process.env.CATNET_API_URL ? "healthy" : "not_configured",
         };
 
+        const fused = fuseForensicChecks(checks);
+
         return {
-          score: payload.confidence_score,
-          status: payload.status,
+          ...fused,
           checks,
           providers,
           providerHealth,

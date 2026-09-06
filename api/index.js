@@ -9,7 +9,26 @@ var __export = (target, all) => {
 };
 
 // server/services/fusion.ts
+function isModuleOfflineOrUninitialized(c) {
+  if (!c) return true;
+  if (c.result === "not_applicable" || c.available === false) return true;
+  if (c.result === "error") return true;
+  if (c.confidence === null || c.confidence === void 0 || Number.isNaN(Number(c.confidence))) return true;
+  if (c.status === 503 || c.status === 501 || c.statusCode === 503 || c.statusCode === 501) return true;
+  if (c.error || c.uninitialized || c.missingWeights || c.offline) return true;
+  const expl = typeof c.explanation === "string" ? c.explanation.toLowerCase() : "";
+  const isOfflineMention = expl.includes("503") || expl.includes("501") || expl.includes("missing weight") || expl.includes("weights missing") || expl.includes("missing local weight") || expl.includes("checkpoint is not configured") || expl.includes("missing checkpoint") || expl.includes("uninitialized") || expl.includes("service unavailable") || expl.includes("offline") || expl.includes("not configured") || expl.includes("excluded from scoring") || expl.includes("signal was excluded") || expl.includes("could not be completed") || expl.includes("neutral score") || expl.includes("neutral fallback") || expl.includes("fallback to neutral");
+  if (isOfflineMention) return true;
+  return false;
+}
 function fuseForensicChecks(checks2) {
+  for (const c of checks2) {
+    if (isModuleOfflineOrUninitialized(c)) {
+      c.result = "not_applicable";
+      c.confidence = 0;
+      c.available = false;
+    }
+  }
   const active = checks2.filter((item) => item.result !== "not_applicable");
   if (!active.length) {
     return {
@@ -363,8 +382,27 @@ async function callExternalAdapter(name, input) {
     const response = await fetch(url, { method: "POST", headers: { "Content-Type": input.mimeType }, body: input.content, signal: AbortSignal.timeout(2e4) });
     if (!response.ok) return check(`${name}_inference`, "not_applicable", 0, `${name} inference returned ${response.status}; this provider signal was excluded from scoring.`, name);
     const payload = await response.json();
-    const integrity = Math.max(0, Math.min(100, Math.round((payload.integrityScore ?? 1 - (payload.tamperProbability ?? 1)) * 100)));
-    return check(`${name}_inference`, integrity < 40 ? "flag" : "pass", integrity, `${name} adapter returned an integrity score of ${integrity}/100 with reliability ${Math.round((payload.reliability ?? 0) * 100)}/100.`, name);
+    if (payload.result === "not_applicable" || payload.status === 501 || payload.status === 503 || Boolean(payload.error) || payload.integrityScore == null && payload.tamperProbability == null && payload.confidence == null) {
+      return check(
+        `${name}_inference`,
+        "not_applicable",
+        0,
+        payload.explanation || `${name === "trufor" ? "TruFor" : "CAT-Net"} model runtime is uninitialized or missing local weights; signal excluded from scoring.`,
+        name
+      );
+    }
+    const rawIntegrity = payload.integrityScore != null ? payload.integrityScore : payload.tamperProbability != null ? 1 - payload.tamperProbability : typeof payload.confidence === "number" ? payload.confidence / 100 : null;
+    if (rawIntegrity == null || Number.isNaN(rawIntegrity)) {
+      return check(`${name}_inference`, "not_applicable", 0, `${name} did not return valid numeric integrity values; signal excluded from scoring.`, name);
+    }
+    const integrity = Math.max(0, Math.min(100, Math.round(rawIntegrity * (rawIntegrity <= 1 ? 100 : 1))));
+    return check(
+      `${name}_inference`,
+      integrity < 40 ? "flag" : "pass",
+      integrity,
+      payload.explanation || `${name} adapter returned an integrity score of ${integrity}/100 with reliability ${Math.round((payload.reliability ?? 0.8) * 100)}/100.`,
+      name
+    );
   } catch {
     return check(`${name}_inference`, "not_applicable", 0, `${name} inference was unavailable; this provider signal was excluded from scoring.`, name);
   }
@@ -438,9 +476,9 @@ async function runForensicAnalysis(input) {
           trufor: process.env.TRUFOR_API_URL ? "healthy" : "not_configured",
           catnet: process.env.CATNET_API_URL ? "healthy" : "not_configured"
         };
+        const fused2 = fuseForensicChecks(checks3);
         return {
-          score: payload.confidence_score,
-          status: payload.status,
+          ...fused2,
           checks: checks3,
           providers: providers2,
           providerHealth: providerHealth2,
