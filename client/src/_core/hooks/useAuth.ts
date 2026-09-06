@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
-import { useCallback, useEffect, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -10,6 +11,69 @@ export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = "/auth/login" } =
     options ?? {};
   const utils = trpc.useUtils();
+
+  const [supabaseUser, setSupabaseUser] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem("veriscan_local_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Listen to Supabase Auth state changes (including email confirmation / magic link redirects)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = {
+          id: session.user.id,
+          email: session.user.email,
+          name:
+            session.user.user_metadata?.name ||
+            session.user.user_metadata?.full_name ||
+            session.user.email?.split("@")[0] ||
+            "Investigator",
+          role: session.user.user_metadata?.role || "analyst",
+        };
+        setSupabaseUser(u);
+        localStorage.setItem("veriscan_local_user", JSON.stringify(u));
+        localStorage.setItem("veriscan_auth_token", session.access_token);
+        utils.auth.me.setData(undefined, u as any);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        const u = {
+          id: session.user.id,
+          email: session.user.email,
+          name:
+            session.user.user_metadata?.name ||
+            session.user.user_metadata?.full_name ||
+            session.user.email?.split("@")[0] ||
+            "Investigator",
+          role: session.user.user_metadata?.role || "analyst",
+        };
+        setSupabaseUser(u);
+        localStorage.setItem("veriscan_local_user", JSON.stringify(u));
+        localStorage.setItem("veriscan_auth_token", session.access_token);
+        utils.auth.me.setData(undefined, u as any);
+
+        if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
+          window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
+      } else if (event === "SIGNED_OUT") {
+        setSupabaseUser(null);
+        localStorage.removeItem("veriscan_local_user");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [utils]);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
@@ -101,7 +165,10 @@ export function useAuth(options?: UseAuthOptions) {
 
   const logout = useCallback(async () => {
     try {
-      await logoutMutation.mutateAsync();
+      await Promise.allSettled([
+        logoutMutation.mutateAsync(),
+        supabase.auth.signOut(),
+      ]);
     } catch {
       // Ignore network errors
     } finally {
@@ -111,6 +178,7 @@ export function useAuth(options?: UseAuthOptions) {
       localStorage.removeItem("manus-cookie");
       localStorage.removeItem("manus-runtime-user-info");
       sessionStorage.clear();
+      setSupabaseUser(null);
 
       // 2. Clear browser cookies directly
       document.cookie = "app_session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure;";
@@ -133,7 +201,7 @@ export function useAuth(options?: UseAuthOptions) {
   );
 
   const state = useMemo(() => {
-    const activeUser = meQuery.data ?? null;
+    const activeUser = meQuery.data ?? supabaseUser ?? null;
     return {
       user: activeUser,
       loading:
@@ -155,6 +223,7 @@ export function useAuth(options?: UseAuthOptions) {
     };
   }, [
     meQuery.data,
+    supabaseUser,
     meQuery.error,
     meQuery.isLoading,
     loginMutation.isPending,

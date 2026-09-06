@@ -238,7 +238,7 @@ export function DocumentUploadPanel({
 
           <div className="mt-4 grid gap-4 sm:grid-cols-[130px_1fr] items-center">
             {stagedPreviewUrl ? (
-              <div className="aspect-[1.3/1] w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shadow-inner">
+              <div className="aspect-[1.3/1] w-full max-w-[160px] sm:max-w-none mx-auto sm:mx-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shadow-inner">
                 <img
                   src={stagedPreviewUrl}
                   alt="Selected Document"
@@ -246,25 +246,25 @@ export function DocumentUploadPanel({
                 />
               </div>
             ) : (
-              <div className="aspect-[1.3/1] w-full rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400">
+              <div className="aspect-[1.3/1] w-full max-w-[160px] sm:max-w-none mx-auto sm:mx-0 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400">
                 <FileUp className="h-8 w-8 text-saffron-dark" />
               </div>
             )}
 
-            <div className="space-y-1 text-left">
-              <p className="font-bold text-slate-900 text-sm truncate max-w-[340px]">
+            <div className="space-y-1 text-center sm:text-left">
+              <p className="font-bold text-slate-900 text-sm truncate max-w-[340px] mx-auto sm:mx-0">
                 {stagedFile.name}
               </p>
               <p className="text-xs text-slate-500">
                 Size: {(stagedFile.size / (1024 * 1024)).toFixed(2)} MB · Format: {stagedFile.type || "Document"}
               </p>
 
-              <div className="pt-2.5 flex flex-wrap gap-2.5">
+              <div className="pt-2.5 flex flex-col sm:flex-row flex-wrap gap-2.5">
                 <Button
                   type="button"
                   disabled={disabled}
                   onClick={handleConfirmUpload}
-                  className="bg-saffron text-slate-950 hover:bg-saffron/90 font-bold text-xs h-9 px-5 shadow-xs"
+                  className="w-full sm:w-auto bg-saffron text-slate-950 hover:bg-saffron/90 font-bold text-xs h-9 px-5 shadow-xs"
                 >
                   <ScanSearch className="mr-2 h-4 w-4" />
                   {disabled ? "Screening Document…" : "Verify This Document"}
@@ -274,7 +274,7 @@ export function DocumentUploadPanel({
                   variant="outline"
                   onClick={handleCancelStaged}
                   disabled={disabled}
-                  className="border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100/60 font-semibold text-xs h-9 px-3.5"
+                  className="w-full sm:w-auto border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100/60 font-semibold text-xs h-9 px-3.5"
                 >
                   <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Wrong Image? Cancel
                 </Button>
@@ -321,11 +321,11 @@ export function DocumentUploadPanel({
             </p>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 w-full max-w-xs sm:max-w-none mx-auto">
             <Button
               type="button"
               disabled={disabled}
-              className="bg-saffron text-slate-950 hover:bg-saffron/90 font-bold text-xs h-10 px-5 shadow-xs"
+              className="w-full sm:w-auto bg-saffron text-slate-950 hover:bg-saffron/90 font-bold text-xs h-10 px-5 shadow-xs"
               onClick={() => inputRef.current?.click()}
             >
               <ScanSearch className="mr-2 h-4 w-4" />
@@ -335,7 +335,7 @@ export function DocumentUploadPanel({
               type="button"
               variant="outline"
               disabled={disabled}
-              className="border-slate-300 bg-white text-slate-800 hover:border-saffron hover:text-saffron-dark font-bold text-xs h-10 px-4 shadow-xs transition-colors"
+              className="w-full sm:w-auto border-slate-300 bg-white text-slate-800 hover:border-saffron hover:text-saffron-dark font-bold text-xs h-10 px-4 shadow-xs transition-colors"
               onClick={startCamera}
             >
               <Camera className="mr-2 h-4 w-4 text-saffron-dark" />

@@ -30,21 +30,21 @@ export function AshokaChakra({ className = "h-7 w-7 text-chakra" }: { className?
 
 export function VeriScanLogo({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="flex items-center gap-3" aria-label="VeriScan National Portal">
-      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#0A192F] text-paper shadow-[0_4px_14px_rgba(10,25,47,0.25)] border border-paper/15">
-        <AshokaChakra className="h-6 w-6 text-[#FF9933]" />
+    <div className="flex items-center gap-2 sm:gap-3" aria-label="VeriScan National Portal">
+      <div className="relative flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-[10px] sm:rounded-[12px] bg-[#0A192F] text-paper shadow-[0_4px_14px_rgba(10,25,47,0.25)] border border-paper/15">
+        <AshokaChakra className="h-5 w-5 sm:h-6 sm:w-6 text-[#FF9933]" />
         {/* Tricolor accent dot */}
-        <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#0A192F] bg-[#138808]" />
+        <span className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 flex h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 items-center justify-center rounded-full border border-[#0A192F] bg-[#138808]" />
       </div>
       {!compact && (
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
-            <span className="font-serif text-xl font-bold tracking-tight text-paper">VeriScan</span>
-            <span className="rounded bg-[#FF9933]/20 px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider text-[#FF9933] border border-[#FF9933]/40">
+            <span className="font-serif text-base sm:text-xl font-bold tracking-tight text-paper">VeriScan</span>
+            <span className="rounded bg-[#FF9933]/20 px-1 py-0.2 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-[#FF9933] border border-[#FF9933]/40">
               GOV.IN
             </span>
           </div>
-          <span className="text-[10px] font-medium tracking-wide text-paper/65">
+          <span className="hidden sm:inline text-[10px] font-medium tracking-wide text-paper/65">
             भारत सरकार · Govt. of India
           </span>
         </div>

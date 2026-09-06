@@ -206,21 +206,21 @@ export default function Dashboard() {
       </div>
 
       {/* Screen a Document + Security Posture */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(350px,0.75fr)]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4.5 sm:p-7 shadow-xs">
           <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
               <span className="gov-pill text-[10px]">
                 Immediate Intake
               </span>
-              <h2 className="mt-1.5 font-serif text-xl font-bold text-slate-900">Screen an Indian Credential</h2>
+              <h2 className="mt-1.5 font-serif text-lg sm:text-xl font-bold text-slate-900">Screen an Indian Credential</h2>
             </div>
             <div className="hidden items-center gap-1.5 rounded-full border border-india-green/30 bg-india-green/10 px-3 py-1 text-xs font-semibold text-india-green sm:flex">
               <LockKeyhole className="h-3.5 w-3.5" /> End-to-End Isolated
             </div>
           </div>
           <DocumentUploadPanel compact disabled={createScan.isPending} onFile={handleFile} />
-          <div className="mt-5 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-india-green" /> Aadhaar (UIDAI 2048-bit QR)</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-saffron" /> Income Tax PAN Card</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-ashoka" /> Indian Passport (ICAO 9303)</span>
@@ -228,14 +228,14 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs flex flex-col justify-between">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4.5 sm:p-7 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <span className="gov-pill text-[10px]">
                   Forensic Pipeline
                 </span>
-                <h2 className="mt-1.5 font-serif text-xl font-bold text-slate-900">Active Detection Layers</h2>
+                <h2 className="mt-1.5 font-serif text-lg sm:text-xl font-bold text-slate-900">Active Detection Layers</h2>
               </div>
               <FileSearch className="h-6 w-6 text-saffron-dark" strokeWidth={1.5} />
             </div>
@@ -262,7 +262,7 @@ export default function Dashboard() {
             <span className="gov-pill text-[10px]">
               Account Audit Trail
             </span>
-            <h2 className="mt-1 font-serif text-xl font-bold text-slate-900">Your Latest Screening Reports</h2>
+            <h2 className="mt-1 font-serif text-lg sm:text-xl font-bold text-slate-900">Your Latest Screening Reports</h2>
           </div>
           {allDocuments.length > 0 && (
             <Link href="/history" className="hidden items-center text-xs font-bold text-saffron-dark hover:text-saffron sm:inline-flex gap-1">
@@ -286,20 +286,20 @@ export default function Dashboard() {
                 <Link
                   key={document.id}
                   href={`/report/${document.id}`}
-                  className="group flex flex-col gap-4 px-6 py-4.5 hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between transition-colors"
+                  className="group flex flex-col gap-3 p-4 sm:px-6 sm:py-4.5 hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between transition-colors"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     <StatusSeal status={document.status} size="md" />
-                    <div>
-                      <p className="font-semibold text-slate-900 group-hover:text-saffron-dark transition-colors">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-900 group-hover:text-saffron-dark transition-colors truncate max-w-[240px] sm:max-w-md">
                         {document.filename}
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-slate-500 truncate">
                         {formatDocumentType(document.type)} · {formatDate(document.uploadedAt)} · Ref: <span className="font-mono text-slate-700">{document.reference}</span>
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-8 pl-13 sm:justify-end sm:pl-0">
+                  <div className="flex items-center justify-between gap-4 sm:gap-8 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:justify-end">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Confidence Score</p>
                       <p className="mt-0.5 font-serif text-base font-bold text-slate-900">

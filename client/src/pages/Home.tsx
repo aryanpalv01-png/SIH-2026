@@ -43,8 +43,8 @@ export default function Home() {
 
       {/* Main Header */}
       <header className="relative z-10 border-b border-white/10 bg-[#081528]/90 backdrop-blur-md">
-        <div className="container flex min-h-[76px] items-center justify-between gap-6">
-          <Link href="/" className="shrink-0">
+        <div className="container flex min-h-[66px] sm:min-h-[76px] items-center justify-between gap-3 sm:gap-6 px-4 sm:px-6">
+          <Link href="/" className="shrink-0 flex items-center">
             <VeriScanLogo />
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-300 md:flex" aria-label="Primary navigation">
@@ -52,23 +52,30 @@ export default function Home() {
             <a href="#security" className="hover:text-white transition-colors">DPI Security</a>
             <a href="#use-cases" className="hover:text-white transition-colors">National Use Cases</a>
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {user ? (
               <Link href="/dashboard">
-                <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg border-white/20 bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white font-semibold">
-                  Open Workspace <ArrowRight className="h-3.5 w-3.5" />
+                <Button variant="outline" size="sm" className="h-8.5 sm:h-9 px-2.5 sm:px-3.5 text-xs sm:text-sm gap-1.5 rounded-lg border-white/20 bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white font-semibold">
+                  <span className="hidden xs:inline">Open</span> Workspace <ArrowRight className="h-3.5 w-3.5 hidden sm:inline" />
                 </Button>
               </Link>
             ) : (
-              <Link href="/auth/login">
-                <Button variant="ghost" size="sm" className="hidden h-9 text-slate-300 hover:bg-white/10 hover:text-white font-semibold sm:inline-flex">
-                  Officer Login
-                </Button>
-              </Link>
+              <>
+                <Link href="/auth/login">
+                  <Button variant="ghost" size="sm" className="h-8.5 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm text-slate-300 hover:bg-white/10 hover:text-white font-semibold">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/auth/signup">
+                  <Button variant="outline" size="sm" className="hidden sm:inline-flex h-8.5 sm:h-9 px-3 text-xs sm:text-sm rounded-lg border-white/20 bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white font-semibold">
+                    Register
+                  </Button>
+                </Link>
+              </>
             )}
             <Link href={user ? "/verify" : "/auth/login"}>
-              <Button size="sm" className="h-9 rounded-lg bg-saffron text-slate-950 font-bold hover:bg-saffron-dark hover:text-white shadow-xs">
-                Screen Document
+              <Button size="sm" className="h-8.5 sm:h-9 px-2.5 sm:px-3.5 text-xs sm:text-sm rounded-lg bg-saffron text-slate-950 font-bold hover:bg-saffron-dark hover:text-white shadow-xs">
+                Screen <span className="hidden xs:inline">Document</span>
               </Button>
             </Link>
           </div>
@@ -81,20 +88,20 @@ export default function Home() {
           <div className="absolute -right-32 top-20 h-96 w-96 rounded-full border border-saffron/15 pointer-events-none" />
           <div className="absolute -right-14 top-48 h-64 w-64 rounded-full border border-india-green/15 pointer-events-none" />
           
-          <div className="container relative grid gap-12 py-16 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16 lg:py-24">
+          <div className="container relative grid gap-10 py-12 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16 lg:py-24 px-4 sm:px-6">
             <div className="max-w-xl">
-              <span className="gov-pill">
+              <span className="gov-pill text-[11px] sm:text-xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-saffron animate-pulse" />
                 National Document Forensic & Integrity Portal
               </span>
-              <h1 className="mt-5 font-serif text-3xl font-bold leading-[1.15] tracking-tight text-white sm:text-4xl lg:text-5xl">
+              <h1 className="mt-4 sm:mt-5 font-serif text-2xl font-bold leading-[1.2] tracking-tight text-white sm:text-4xl lg:text-5xl">
                 Autonomous Forgery Screening. <span className="text-saffron">Zero False Positives.</span>
               </h1>
-              <p className="mt-4 text-base leading-relaxed text-slate-300">
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base leading-relaxed text-slate-300">
                 Calibrated for Indian credentials: e-Aadhaar QR codes, Income Tax PAN structural checksums, ICAO passports, and academic marksheets. Intelligent physical vs digital noise variance routing ensures genuine soft-copies are never mistakenly flagged.
               </p>
               
-              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-semibold text-slate-300">
+              <div className="mt-6 sm:mt-7 flex flex-wrap items-center gap-x-5 gap-y-2.5 text-xs font-semibold text-slate-300">
                 <span className="inline-flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-india-green" /> 11-Layer Forensic Analysis
                 </span>
@@ -116,22 +123,22 @@ export default function Home() {
           </div>
 
           {/* Key Facts Strip */}
-          <div className="container grid max-w-5xl grid-cols-2 gap-6 border-t border-white/10 py-8 sm:grid-cols-4">
+          <div className="container grid max-w-5xl grid-cols-2 gap-4 sm:gap-6 border-t border-white/10 py-6 sm:py-8 sm:grid-cols-4 px-4 sm:px-6">
             <div>
-              <p className="font-serif text-3xl font-bold text-white">11</p>
-              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-saffron">Forensic Layers</p>
+              <p className="font-serif text-2xl sm:text-3xl font-bold text-white">11</p>
+              <p className="mt-1 text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-saffron">Forensic Layers</p>
             </div>
             <div>
-              <p className="font-serif text-3xl font-bold text-white">100 pt</p>
-              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-slate-300">Confidence Metric</p>
+              <p className="font-serif text-2xl sm:text-3xl font-bold text-white">100 pt</p>
+              <p className="mt-1 text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-slate-300">Confidence Metric</p>
             </div>
             <div>
-              <p className="font-serif text-3xl font-bold text-white">0 ms</p>
-              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-india-green">Disk Leakage Risk</p>
+              <p className="font-serif text-2xl sm:text-3xl font-bold text-white">0 ms</p>
+              <p className="mt-1 text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-india-green">Disk Leakage Risk</p>
             </div>
             <div>
-              <p className="font-serif text-3xl font-bold text-white">100%</p>
-              <p className="mt-1 text-[11px] uppercase font-bold tracking-wider text-saffron">Account Isolated</p>
+              <p className="font-serif text-2xl sm:text-3xl font-bold text-white">100%</p>
+              <p className="mt-1 text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-saffron">Account Isolated</p>
             </div>
           </div>
         </section>
@@ -248,12 +255,12 @@ export default function Home() {
 
       {/* Official Government Footer */}
       <footer className="border-t border-white/10 bg-[#060e1a] py-8 text-slate-400">
-        <div className="container flex flex-col gap-5 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+        <div className="container flex flex-col gap-4 text-xs sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6">
+          <div className="flex flex-wrap items-center gap-3">
             <VeriScanLogo compact />
-            <span>भारत सरकार · Ministry of Electronics and IT · National Document Forensic Initiative</span>
+            <span className="text-[11px] sm:text-xs">भारत सरकार · Ministry of Electronics and IT · National Document Forensic Initiative</span>
           </div>
-          <span>© 2026 VeriScan India. All rights reserved.</span>
+          <span className="text-[11px] sm:text-xs text-slate-500">© 2026 VeriScan India. All rights reserved.</span>
         </div>
       </footer>
     </div>
