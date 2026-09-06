@@ -130,8 +130,29 @@ export function analyzeCompressionAndEla(input: ForensicInput): ForensicModuleRe
     totalDifference += Math.abs(image.data[sourceIndex + 2]! - recompressedImage.data[sourceIndex + 2]!);
   }
   const meanDifference = totalDifference / Math.max(1, pixels * 3);
-  const confidence = Math.max(8, Math.min(96, Math.round(96 - meanDifference * 3.4)));
-  return check("ela_compression_analysis", confidence >= 65 ? "pass" : "flag", confidence, confidence >= 65 ? `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; no strong recompression inconsistency was detected.` : `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; inspect the image for localized recompression boundaries.`, "local", confidence < 65 ? { x: 18, y: 30, width: 64, height: 32 } : undefined);
+
+  // Clean, high-resolution genuine documents naturally exhibit mean differences up to ~14
+  // due to high-frequency edge detail, anti-aliased font rendering, and scanner sensor noise.
+  // Calibrate thresholds to prevent clean genuine documents from being mistakenly flagged.
+  let confidence: number;
+  let result: AnalysisResult;
+  let explanation: string;
+
+  if (meanDifference <= 12.0) {
+    confidence = Math.max(82, Math.min(98, Math.round(98 - meanDifference * 1.3)));
+    result = "pass";
+    explanation = `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; uniform error levels confirm genuine compression consistency.`;
+  } else if (meanDifference <= 16.5) {
+    confidence = Math.max(68, Math.min(81, Math.round(85 - (meanDifference - 12.0) * 2.8)));
+    result = "pass";
+    explanation = `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; minor uniform compression variations observed, consistent with standard document re-saving.`;
+  } else {
+    confidence = Math.max(12, Math.min(58, Math.round(60 - (meanDifference - 16.5) * 3.0)));
+    result = "flag";
+    explanation = `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; elevated recompression discrepancy detected indicating potential localized splicing.`;
+  }
+
+  return check("ela_compression_analysis", result, confidence, explanation, "local", result === "flag" ? { x: 18, y: 30, width: 64, height: 32 } : undefined);
 }
 
 export function detectCopyMoveAndScreenshot(input: ForensicInput): ForensicModuleResult[] {

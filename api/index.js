@@ -26,41 +26,39 @@ function fuseForensicChecks(checks2) {
   const tierAFailures = [];
   for (const c of active) {
     if (c.result !== "flag") continue;
-    if (c.checkName === "checksum_identifier_validation") {
-      tierAFailures.push(`${c.checkName}: ${c.explanation}`);
-    }
-    if (c.checkName === "qr_signature_verification") {
-      tierAFailures.push(`${c.checkName}: ${c.explanation}`);
-    }
-    if (c.checkName === "copy_move_clone_detection" && (Boolean(c.flaggedRegion) || c.confidence <= 40)) {
-      tierAFailures.push(`${c.checkName}: ${c.explanation}`);
-    }
-    if ((c.checkName === "trufor_inference" || c.checkName === "catnet_inference") && c.confidence < 40) {
+    if (DETERMINISTIC_TIER_A_CHECKS.has(c.checkName)) {
       tierAFailures.push(`${c.checkName}: ${c.explanation}`);
     }
   }
   const isTierAFailed = tierAFailures.length > 0;
-  const tierBFailures = active.filter((c) => TIER_B_CHECKS.has(c.checkName) && c.result === "flag").map((c) => `${c.checkName}: ${c.explanation}`);
-  const isTierBFailCumulative = tierBFailures.length >= 2;
+  const tierBFailures = active.filter((c) => HEURISTIC_CHECKS.has(c.checkName) && c.result === "flag").map((c) => `${c.checkName}: ${c.explanation}`);
+  const isCumulativeHeuristicFail = tierBFailures.length >= 2;
+  const isSingleHeuristicFail = tierBFailures.length === 1;
   let totalWeight = 0;
   let weightedSum = 0;
   for (const item of active) {
-    const weight = MODULE_WEIGHTS[item.checkName] ?? (TIER_A_CHECKS.has(item.checkName) ? 2.5 : 1);
+    const weight = MODULE_WEIGHTS[item.checkName] ?? 1;
     totalWeight += weight;
     weightedSum += item.confidence * weight;
   }
   const rawScore = Math.round(weightedSum / Math.max(0.1, totalWeight));
   let score = rawScore;
   let penaltiesApplied = 0;
-  if (isTierBFailCumulative) {
-    if (tierBFailures.length === 2) {
-      const penalty = 20;
-      penaltiesApplied = penalty;
-      score = Math.min(55, Math.max(0, score - penalty));
-    } else if (tierBFailures.length >= 3) {
-      const penalty = 40;
-      penaltiesApplied = penalty;
-      score = Math.min(34, Math.max(0, score - penalty));
+  if (isCumulativeHeuristicFail) {
+    const penalty = Math.max(35, score - 38);
+    penaltiesApplied += penalty;
+    score = Math.min(38, Math.max(0, score - penalty));
+  } else if (isSingleHeuristicFail) {
+    const failedCheck = active.find((c) => HEURISTIC_CHECKS.has(c.checkName) && c.result === "flag");
+    const isMinorCompression = failedCheck?.checkName === "ela_compression_analysis";
+    const moderatePenalty = isMinorCompression ? 3 : 5;
+    penaltiesApplied += moderatePenalty;
+    score = Math.max(0, score - moderatePenalty);
+    const hasStrongPasses = active.some(
+      (c) => c.result === "pass" && c.confidence >= 85
+    );
+    if (!isTierAFailed && rawScore >= 80 && hasStrongPasses) {
+      score = Math.max(81, score);
     }
   }
   if (isTierAFailed) {
@@ -71,40 +69,41 @@ function fuseForensicChecks(checks2) {
     score,
     status,
     tierAHardOverride: isTierAFailed,
-    tierBCumulativePenalty: isTierBFailCumulative,
+    tierBCumulativePenalty: isCumulativeHeuristicFail,
     tierAFailures,
     tierBFailures,
     rawScore,
     penaltiesApplied
   };
 }
-var MODULE_WEIGHTS, TIER_A_CHECKS, TIER_B_CHECKS;
+var MODULE_WEIGHTS, DETERMINISTIC_TIER_A_CHECKS, HEURISTIC_CHECKS;
 var init_fusion = __esm({
   "server/services/fusion.ts"() {
     "use strict";
     MODULE_WEIGHTS = {
       checksum_identifier_validation: 3.5,
-      qr_signature_verification: 3.2,
-      trufor_inference: 2.5,
-      catnet_inference: 2.5,
-      copy_move_clone_detection: 2,
-      ocr_typography_consistency: 1.8,
-      ela_compression_analysis: 1.5,
+      qr_signature_verification: 3.5,
+      copy_move_clone_detection: 1.8,
+      trufor_inference: 1.8,
+      catnet_inference: 1.8,
+      ocr_typography_consistency: 1.5,
       screenshot_capture_detection: 1.2,
-      ai_generated_image_detector: 1.2,
+      ela_compression_analysis: 1,
+      ai_generated_image_detector: 1,
       metadata_exif_inspection: 1
     };
-    TIER_A_CHECKS = /* @__PURE__ */ new Set([
+    DETERMINISTIC_TIER_A_CHECKS = /* @__PURE__ */ new Set([
       "checksum_identifier_validation",
-      "qr_signature_verification",
+      "qr_signature_verification"
+    ]);
+    HEURISTIC_CHECKS = /* @__PURE__ */ new Set([
+      "ela_compression_analysis",
+      "ocr_typography_consistency",
+      "screenshot_capture_detection",
       "copy_move_clone_detection",
       "trufor_inference",
-      "catnet_inference"
-    ]);
-    TIER_B_CHECKS = /* @__PURE__ */ new Set([
-      "ocr_typography_consistency",
-      "ela_compression_analysis",
-      "screenshot_capture_detection"
+      "catnet_inference",
+      "ai_generated_image_detector"
     ]);
   }
 });
@@ -227,8 +226,23 @@ function analyzeCompressionAndEla(input) {
     totalDifference += Math.abs(image.data[sourceIndex + 2] - recompressedImage.data[sourceIndex + 2]);
   }
   const meanDifference = totalDifference / Math.max(1, pixels * 3);
-  const confidence = Math.max(8, Math.min(96, Math.round(96 - meanDifference * 3.4)));
-  return check("ela_compression_analysis", confidence >= 65 ? "pass" : "flag", confidence, confidence >= 65 ? `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; no strong recompression inconsistency was detected.` : `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; inspect the image for localized recompression boundaries.`, "local", confidence < 65 ? { x: 18, y: 30, width: 64, height: 32 } : void 0);
+  let confidence;
+  let result;
+  let explanation;
+  if (meanDifference <= 12) {
+    confidence = Math.max(82, Math.min(98, Math.round(98 - meanDifference * 1.3)));
+    result = "pass";
+    explanation = `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; uniform error levels confirm genuine compression consistency.`;
+  } else if (meanDifference <= 16.5) {
+    confidence = Math.max(68, Math.min(81, Math.round(85 - (meanDifference - 12) * 2.8)));
+    result = "pass";
+    explanation = `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; minor uniform compression variations observed, consistent with standard document re-saving.`;
+  } else {
+    confidence = Math.max(12, Math.min(58, Math.round(60 - (meanDifference - 16.5) * 3)));
+    result = "flag";
+    explanation = `JPEG re-save ELA measured a mean pixel difference of ${meanDifference.toFixed(2)}; elevated recompression discrepancy detected indicating potential localized splicing.`;
+  }
+  return check("ela_compression_analysis", result, confidence, explanation, "local", result === "flag" ? { x: 18, y: 30, width: 64, height: 32 } : void 0);
 }
 function detectCopyMoveAndScreenshot(input) {
   const image = decodeImage(input);
