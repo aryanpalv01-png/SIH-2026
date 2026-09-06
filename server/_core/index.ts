@@ -38,7 +38,13 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
+  // Dedicated health check endpoints (accessible at /health and /api/health)
+  app.get(["/health", "/api/health"], (_req, res) => {
+    res.status(200).json({ status: "healthy", service: "veriscan-node-server" });
+  });
+
   // Direct document analysis endpoint
+
   app.post("/api/analyze-direct", async (req, res) => {
     try {
       const { fileName, mimeType, fileSize, documentType, contentBase64 } = req.body;
