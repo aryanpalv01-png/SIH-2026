@@ -18,7 +18,18 @@ export type VerificationCheck = {
   flaggedRegion?: { x: number; y: number; width: number; height: number };
   provider?: string;
   providerState?: string;
+  category?: string;
 };
+
+export function getCheckCategory(check: VerificationCheck): string {
+  if (check.category) return check.category;
+  const id = (check.id + " " + check.name).toLowerCase();
+  if (id.includes("verhoeff") || id.includes("checksum") || id.includes("qr") || id.includes("signature")) return "deterministic";
+  if (id.includes("ela") || id.includes("compression") || id.includes("noise") || id.includes("sensor")) return "visual";
+  if (id.includes("font") || id.includes("typography") || id.includes("ocr")) return "typography";
+  if (id.includes("clone") || id.includes("trufor") || id.includes("catnet") || id.includes("model")) return "neural_models";
+  return "integrity";
+}
 
 export type VerificationDocument = {
   id: string;

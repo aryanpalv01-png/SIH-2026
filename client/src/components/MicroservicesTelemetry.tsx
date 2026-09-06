@@ -120,39 +120,38 @@ export function MicroservicesTelemetry({
   ];
 
   return (
-    <div className="rounded-[22px] border border-border bg-paper p-5 sm:p-6 shadow-[0_8px_28px_rgba(66,58,44,0.06)]">
+    <div className="terminal-panel p-5 sm:p-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3A3D45] pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-charcoal text-bronze">
+          <div className="flex h-8 w-8 items-center justify-center border border-[#3A3D45] bg-[#1C1E22] text-[#8A6D1F]">
             <Activity className="h-4 w-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-serif text-base font-bold text-ink">
-                Microservices Architecture Telemetry
+              <h3 className="font-serif text-sm font-bold text-[#FAF7F0]">
+                Microservices Distributed Architecture Telemetry
               </h3>
-              <span className="inline-flex items-center gap-1 rounded-full bg-bronze/12 px-2 py-0.5 text-[10px] font-bold text-bronze-dark uppercase tracking-wider">
-                <span className="h-1.5 w-1.5 rounded-full bg-bronze animate-ping" />
-                Live Mesh
+              <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40">
+                LIVE MESH
               </span>
             </div>
-            <p className="text-[11px] text-muted-ink">
-              n8n Orchestration Layer · Fast, GPU & External API Pipelines
+            <p className="font-mono text-[10.5px] text-[#A09D95]">
+              n8n Orchestration Layer · Fast, GPU & External API Inference Branches
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-muted-ink">
-          <span>Overall Health:</span>
-          <span className="font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> All 9 Nodes Operational
+        <div className="flex items-center gap-2 font-mono text-xs text-[#A09D95]">
+          <span>TOPOLOGY_STATUS:</span>
+          <span className="command-badge bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" /> ALL 9 NODES NOMINAL
           </span>
         </div>
       </div>
 
       {/* Interactive Microservices Architecture Grid / Diagram */}
-      <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-3">
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-3">
         {nodes.map((node, index) => {
           const isPulsing = pulseIndex === index;
           const isSelected = selectedNode === node.id;
@@ -161,56 +160,56 @@ export function MicroservicesTelemetry({
             <div
               key={node.id}
               onClick={() => setSelectedNode(isSelected ? null : node.id)}
-              className={`group relative rounded-xl border p-3.5 transition-all cursor-pointer ${
+              className={`group relative border p-3 transition-all cursor-pointer ${
                 isSelected
-                  ? "border-bronze bg-bronze/8 shadow-md"
+                  ? "border-[#8A6D1F] bg-[#8A6D1F]/15"
                   : isPulsing
-                  ? "border-bronze/60 bg-bronze/5 scale-[1.01]"
-                  : "border-border bg-paper-deep hover:border-bronze/40 hover:bg-paper"
+                  ? "border-[#8A6D1F]/70 bg-[#1C1E22]"
+                  : "border-[#3A3D45] bg-[#1C1E22] hover:border-[#8A6D1F]/50"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                    className={`flex h-7 w-7 items-center justify-center border transition-colors ${
                       isPulsing || isSelected
-                        ? "bg-charcoal text-bronze"
-                        : "bg-paper border border-border text-muted-ink"
+                        ? "border-[#8A6D1F] bg-[#8A6D1F]/20 text-[#D1CEC7]"
+                        : "border-[#3A3D45] bg-[#26282D] text-[#A09D95]"
                     }`}
                   >
                     {node.icon}
                   </div>
                   <div>
-                    <p className="text-[11px] font-semibold text-muted-ink uppercase tracking-wider">
+                    <p className="font-mono text-[9.5px] font-bold text-[#A09D95] uppercase tracking-wider">
                       {node.category}
                     </p>
-                    <h4 className="text-xs font-bold text-ink leading-tight">
+                    <h4 className="font-mono text-xs font-bold text-[#FAF7F0] leading-tight">
                       {node.title}
                     </h4>
                   </div>
                 </div>
 
-                <span className="font-mono text-[10px] text-muted-ink bg-paper px-1.5 py-0.5 rounded border border-border">
+                <span className="font-mono text-[10px] text-[#8A6D1F] bg-[#26282D] px-1.5 py-0.5 border border-[#3A3D45]">
                   {node.latency}
                 </span>
               </div>
 
-              <p className="mt-2.5 text-[11px] leading-relaxed text-muted-ink line-clamp-2">
+              <p className="mt-2 text-[11px] leading-relaxed text-[#A09D95] line-clamp-2">
                 {node.desc}
               </p>
 
               {/* Data packet flow indicator */}
-              <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2 text-[10px]">
-                <span className="flex items-center gap-1 text-muted-ink">
+              <div className="mt-2.5 flex items-center justify-between border-t border-[#3A3D45] pt-1.5 font-mono text-[10px]">
+                <span className="flex items-center gap-1.5 text-[#A09D95]">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      isPulsing ? "bg-bronze animate-pulse" : "bg-emerald-500"
+                      isPulsing ? "bg-[#8A6D1F] animate-pulse" : "bg-[#22C55E]"
                     }`}
                   />
-                  {node.status}
+                  {node.status.toUpperCase()}
                 </span>
-                <span className="text-[9px] text-bronze-dark uppercase tracking-widest font-semibold group-hover:underline">
-                  Inspect Node →
+                <span className="text-[9px] text-[#8A6D1F] uppercase tracking-widest font-semibold group-hover:underline">
+                  [INSPECT]
                 </span>
               </div>
             </div>
@@ -220,25 +219,25 @@ export function MicroservicesTelemetry({
 
       {/* Selected Node Expanded Detail Drawer */}
       {selectedNode && (
-        <div className="mt-4 rounded-xl border border-bronze/30 bg-paper p-4 text-xs animate-in fade-in">
+        <div className="mt-3 border border-[#8A6D1F] bg-[#1C1E22] p-3.5 text-xs">
           {(() => {
             const active = nodes.find((n) => n.id === selectedNode)!;
             return (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-ink text-sm">{active.title}</span>
-                    <span className="bg-bronze/10 text-bronze-dark px-2 py-0.5 rounded font-mono text-[10px]">
+                    <span className="font-bold text-[#FAF7F0] text-xs">{active.title}</span>
+                    <span className="bg-[#26282D] text-[#8A6D1F] px-2 py-0.5 border border-[#3A3D45] text-[10px]">
                       {active.category}
                     </span>
                   </div>
-                  <p className="mt-1 text-muted-ink">{active.desc}</p>
+                  <p className="mt-1 text-[#A09D95] font-sans text-xs">{active.desc}</p>
                 </div>
                 <button
                   onClick={() => setSelectedNode(null)}
-                  className="self-end sm:self-center text-muted-ink hover:text-ink font-semibold"
+                  className="self-end sm:self-center text-[#A09D95] hover:text-[#FAF7F0] font-bold text-xs"
                 >
-                  Close ✕
+                  [CLOSE_DRAWER]
                 </button>
               </div>
             );

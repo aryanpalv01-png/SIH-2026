@@ -1,12 +1,19 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { StatusSeal } from "@/components/StatusSeal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { getPreviewDocuments } from "@/lib/scanStore";
-import { formatDate, formatDocumentType, statusMeta } from "@/lib/veriscan";
-import { ArrowRight, CheckCircle2, CircleAlert, FileCheck2, ShieldAlert, Sparkles } from "lucide-react";
+import { formatDate, formatDocumentType, statusMeta, DocumentStatus } from "@/lib/veriscan";
+import {
+  ArrowRight,
+  CheckCircle2,
+  CircleAlert,
+  FileCheck2,
+  ShieldAlert,
+  Sparkles,
+  HelpCircle,
+} from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "wouter";
 
@@ -39,136 +46,182 @@ export default function Reports() {
   const forged = documents.filter((document) => document.status === "likely_forged").length;
 
   return (
-    <div className="mx-auto max-w-[1380px] space-y-6">
+    <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Top Banner */}
       <PageHeader
         categoryHindi="सत्यापन रिपोर्ट सारांश"
-        categoryEnglish="Verification Report Ledger"
-        title="Forensic Verdict Reports"
+        categoryEnglish="VERDICT_DOSSIERS // AUDIT_SUMMARY"
+        title="Forensic Verdict Ledgers"
         subtitle={
           <>
-            Structured breakdown of forensic integrity outcomes for account: <span className="font-mono text-xs font-semibold text-slate-800">{user?.email || "Local Officer"}</span>
+            Evidentiary breakdown of document screening outcomes for vault: <span className="text-[#FAF7F0] font-semibold">{user?.email || "LOCAL_OFFICER"}</span>
           </>
         }
-        accountBadge={user?.email ? `Vault: ${user.email}` : undefined}
+        accountBadge={user?.email ? `VAULT: ${user.email}` : undefined}
         actions={
           <Link href="/verify">
-            <Button size="sm" className="h-9 gap-1.5 rounded-lg bg-saffron text-slate-950 font-bold hover:bg-saffron-dark hover:text-white shadow-xs">
-              <FileCheck2 className="h-4 w-4" /> New Verification
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/80 font-mono text-[11px] font-bold"
+            >
+              <FileCheck2 className="h-3.5 w-3.5" /> [NEW_VERIFICATION]
             </Button>
           </Link>
         }
       />
 
       {/* 3 Verdict Metric Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3 font-mono">
         <VerdictCard
-          icon={<CheckCircle2 className="h-5 w-5 text-india-green" />}
+          icon={<CheckCircle2 className="h-4 w-4 text-[#22C55E]" />}
           status="verified"
           count={verified}
-          label="Genuine / Verified"
-          body="No material visual or structural anomalies detected"
+          label="GENUINE / VERIFIED"
+          body="No material visual, typographic, or mathematical anomalies detected"
         />
         <VerdictCard
-          icon={<CircleAlert className="h-5 w-5 text-amber-600" />}
+          icon={<CircleAlert className="h-4 w-4 text-amber-400" />}
           status="needs_review"
           count={review}
-          label="Human Review Required"
+          label="HUMAN REVIEW REQUIRED"
           body="Inconclusive indicators or typography boundary variations"
         />
         <VerdictCard
-          icon={<ShieldAlert className="h-5 w-5 text-rose-600" />}
+          icon={<ShieldAlert className="h-4 w-4 text-rose-400" />}
           status="likely_forged"
           count={forged}
-          label="Likely Tampered"
+          label="LIKELY TAMPERED"
           body="Copy-move clone detected, OCR mismatch, or ELA recompression"
         />
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs">
-        <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-center">
+      <section className="terminal-panel font-mono text-xs">
+        <div className="flex flex-col justify-between gap-3 border-b border-[#3A3D45] p-4 sm:flex-row sm:items-center">
           <div>
-            <span className="gov-pill text-[10px]">Document Ledger</span>
-            <h2 className="mt-1.5 font-serif text-xl font-bold text-slate-900">Inspect Individual Reports</h2>
+            <span className="text-[10px] text-[#A09D95] uppercase tracking-wider">
+              DOSSIER_RECORDS ({documents.length})
+            </span>
+            <h2 className="font-serif text-base font-bold text-[#FAF7F0] mt-0.5">
+              Inspect Individual Forensic Reports
+            </h2>
           </div>
-          <Link href="/history" className="inline-flex items-center text-xs font-bold text-saffron-dark hover:text-saffron gap-1">
-            Search Archive <ArrowRight className="h-3.5 w-3.5" />
+          <Link
+            href="/history"
+            className="inline-flex items-center text-[11px] font-bold text-[#8A6D1F] hover:text-[#FAF7F0] gap-1 transition-colors"
+          >
+            [SEARCH_ARCHIVE] <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
 
         {documents.length > 0 ? (
-          <div className="divide-y divide-slate-100">
-            {documents.map((document) => (
-              <Link
-                href={`/report/${document.id}`}
-                key={document.id}
-                className="group flex flex-col gap-4 py-4.5 transition-colors hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between sm:px-3 rounded-xl"
-              >
-                <div className="flex items-center gap-4">
-                  <StatusSeal status={document.status} size="md" />
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 group-hover:text-saffron-dark transition-colors">
-                      {document.filename}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {formatDocumentType(document.type)} · {formatDate(document.uploadedAt)} · Ref: <span className="font-mono text-slate-700">{document.reference}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-8 pl-13 sm:justify-end sm:pl-0">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Confidence</p>
-                    <p className="mt-0.5 font-serif text-base font-bold text-slate-900">
-                      {document.score}
-                      <span className="font-sans text-xs font-normal text-slate-500">/100</span>
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-600 group-hover:text-saffron-dark inline-flex items-center">
-                    View full report <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-                  </span>
-                </div>
-              </Link>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="dossier-table w-full text-left">
+              <thead>
+                <tr>
+                  <th className="py-2.5 px-3">REF_ID</th>
+                  <th className="py-2.5 px-3">DOCUMENT_FILE</th>
+                  <th className="py-2.5 px-3">TYPE</th>
+                  <th className="py-2.5 px-3">TIMESTAMP</th>
+                  <th className="py-2.5 px-3 text-right">SCORE</th>
+                  <th className="py-2.5 px-3">VERDICT</th>
+                  <th className="py-2.5 px-3 text-right">ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((doc) => {
+                  const isVerified = doc.status === "verified";
+                  const isForged = doc.status === "likely_forged";
+
+                  return (
+                    <tr key={doc.id} className="hover:bg-[#1C1E22] transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-[#8A6D1F]">{doc.reference}</td>
+                      <td className="py-2.5 px-3 font-bold text-[#FAF7F0] max-w-xs truncate">{doc.filename}</td>
+                      <td className="py-2.5 px-3 text-[10.5px] text-[#A09D95] uppercase">{formatDocumentType(doc.type)}</td>
+                      <td className="py-2.5 px-3 text-[10.5px] text-[#A09D95]">{formatDate(doc.uploadedAt)}</td>
+                      <td className="py-2.5 px-3 text-right font-serif text-sm font-bold">
+                        <span className={isVerified ? "text-[#22C55E]" : isForged ? "text-rose-400" : "text-amber-400"}>
+                          {doc.score}
+                        </span>
+                        <span className="font-sans text-[10px] text-[#A09D95]"> / 100</span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`command-badge text-[10px] font-bold ${
+                            isVerified
+                              ? "bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30"
+                              : isForged
+                              ? "bg-rose-950/60 text-rose-400 border-rose-800"
+                              : "bg-amber-950/60 text-amber-400 border-amber-800"
+                          }`}
+                        >
+                          [{statusMeta[doc.status as DocumentStatus]?.label?.toUpperCase() || "UNKNOWN"}]
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <Link
+                          href={`/report/${doc.id}`}
+                          className="inline-flex items-center gap-1 border border-[#3A3D45] bg-[#1C1E22] px-2 py-1 text-[10.5px] text-[#FAF7F0] hover:border-[#8A6D1F] hover:bg-[#26282D] transition-colors"
+                        >
+                          [VIEW_DOSSIER] <ArrowRight className="h-3 w-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
-          <div className="py-6">
+          <div className="py-6 p-4">
             <EmptyState
-              icon={<Sparkles className="h-6 w-6" />}
-              title="No reports generated for this account"
+              icon={<Sparkles className="h-6 w-6 text-[#8A6D1F]" />}
+              title="NO_REPORTS_GENERATED"
               description="Screen your first document to populate this integrity ledger."
-              actionLabel="Screen a Document"
+              actionLabel="[SCREEN_DOCUMENT]"
               actionHref="/verify"
             />
           </div>
         )}
       </section>
 
-      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-xs leading-relaxed text-slate-600 shadow-xs">
-        <ShieldAlert className="h-4 w-4 shrink-0 text-saffron-dark" />
-        <span>All forensic reports are generated using algorithmic preflight, computer vision (OpenCV/ELA), and localized deep models under strict data isolation.</span>
+      <div className="flex items-center gap-2 border border-[#3A3D45] bg-[#1C1E22] p-3 font-mono text-[10.5px] text-[#A09D95]">
+        <HelpCircle className="h-3.5 w-3.5 shrink-0 text-[#8A6D1F]" />
+        <span>All forensic dossiers are compiled via cryptographic preflight, computer vision (OpenCV/ELA), and localized neural inference under strict session isolation.</span>
       </div>
     </div>
   );
 }
 
-function VerdictCard({ icon, status, count, label, body }: { icon: React.ReactNode; status: "verified" | "needs_review" | "likely_forged"; count: number; label: string; body: string }) {
+function VerdictCard({
+  icon,
+  status,
+  count,
+  label,
+  body,
+}: {
+  icon: React.ReactNode;
+  status: "verified" | "needs_review" | "likely_forged";
+  count: number;
+  label: string;
+  body: string;
+}) {
   const borderTone =
-    status === "verified" ? "border-india-green/30 bg-india-green/5" :
-    status === "needs_review" ? "border-amber-300 bg-amber-50/70" :
-    "border-rose-200 bg-rose-50/70";
+    status === "verified"
+      ? "border-[#22C55E]/40 bg-[#1C1E22]"
+      : status === "needs_review"
+      ? "border-amber-500/40 bg-[#1C1E22]"
+      : "border-rose-500/40 bg-[#1C1E22]";
 
   return (
-    <div className={`rounded-2xl border p-5 shadow-xs transition-all hover:-translate-y-0.5 ${borderTone}`}>
-      <div className="flex items-center justify-between">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-2xs">
+    <div className={`terminal-panel p-4 border ${borderTone}`}>
+      <div className="flex items-center justify-between border-b border-[#3A3D45] pb-2">
+        <span className="flex h-7 w-7 items-center justify-center border border-[#3A3D45] bg-[#26282D]">
           {icon}
         </span>
-        <span className="font-serif text-3xl font-bold text-slate-900">{String(count).padStart(2, "0")}</span>
+        <span className="font-serif text-2xl font-bold text-[#FAF7F0]">{String(count).padStart(2, "0")}</span>
       </div>
-      <p className="mt-4 font-serif text-lg font-bold text-slate-900">{label}</p>
-      <p className="mt-1 text-xs text-slate-500 leading-relaxed">{body}</p>
+      <p className="mt-3 font-mono text-xs font-bold text-[#FAF7F0]">{label}</p>
+      <p className="mt-1 text-[11px] text-[#A09D95] leading-relaxed">{body}</p>
     </div>
   );
 }
-
-

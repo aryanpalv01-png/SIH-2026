@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertTriangle, Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, ShieldAlert, Crosshair } from "lucide-react";
 
 export interface AnomalyItem {
   id: number | string;
@@ -16,7 +16,6 @@ export interface AnomalyViewerProps {
   title?: string;
 }
 
-// Fallback sample anomalies if none provided by backend
 const DEFAULT_SAMPLE_ANOMALIES: AnomalyItem[] = [
   {
     id: 1,
@@ -49,63 +48,80 @@ export function AnomalyViewer({
   anomalies = DEFAULT_SAMPLE_ANOMALIES,
   title = "Document Anomaly & Tamper Inspection",
 }: AnomalyViewerProps) {
-  // 2. UI & State Logic: boolean state showAnomalies (default: false)
-  const [showAnomalies, setShowAnomalies] = useState<boolean>(false);
+  const [showAnomalies, setShowAnomalies] = useState<boolean>(true);
   const [activeAnomalyId, setActiveAnomalyId] = useState<string | number | null>(null);
 
   const activeAnomalies = anomalies && anomalies.length > 0 ? anomalies : DEFAULT_SAMPLE_ANOMALIES;
+  const hoveredOrSelected = activeAnomalies.find((a) => a.id === activeAnomalyId);
 
   return (
-    <div className="w-full rounded-2xl bg-[#FAF7F0] p-5 sm:p-7 border border-slate-200 shadow-xs">
-      {/* 2. Header Section */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+    <div className="terminal-panel p-4 sm:p-5">
+      {/* Header Section */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-[#3A3D45] pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="gov-pill text-[10px] bg-[#8A6D1F]/10 text-[#8A6D1F] border-[#8A6D1F]/20">
-              <ShieldAlert className="h-3 w-3" />
-              Interactive Bounding Box Detection
+            <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 flex items-center gap-1.5">
+              <Crosshair className="h-3 w-3 text-[#8A6D1F]" />
+              FORENSIC_LOUPE // BOUNDING_BOX
             </span>
             {showAnomalies && (
-              <span className="rounded-full bg-red-100 text-red-800 border border-red-200 px-2 py-0.5 text-[10px] font-bold">
-                {activeAnomalies.length} Flagged {activeAnomalies.length === 1 ? "Zone" : "Zones"}
+              <span className="command-badge bg-rose-950/60 text-rose-300 border-rose-800/60">
+                {activeAnomalies.length} FLAGGED {activeAnomalies.length === 1 ? "ZONE" : "ZONES"}
               </span>
             )}
           </div>
-          <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#2A2C30] mt-1 tracking-tight">
+          <h2 className="font-serif text-base sm:text-lg font-bold text-[#FAF7F0] mt-1 tracking-tight">
             {title}
           </h2>
         </div>
 
-        {/* Toggle Button: "Show Tampered Zones" / "Hide Tampered Zones" */}
+        {/* Toggle Button */}
         <button
           type="button"
           onClick={() => setShowAnomalies((prev) => !prev)}
-          className="inline-flex items-center justify-center gap-2 bg-[#8A6D1F] hover:bg-[#B08D2E] text-[#FAF7F0] font-semibold rounded-lg px-4 py-2 text-xs sm:text-sm shadow-xs transition-colors duration-150 cursor-pointer select-none"
+          className="inline-flex items-center justify-center gap-2 border border-[#8A6D1F] bg-[#8A6D1F]/15 hover:bg-[#8A6D1F]/25 text-[#FAF7F0] font-mono font-semibold px-3 py-1.5 text-xs transition-colors cursor-pointer select-none"
         >
           {showAnomalies ? (
             <>
-              <EyeOff className="h-4 w-4" />
-              <span>Hide Tampered Zones</span>
+              <EyeOff className="h-3.5 w-3.5 text-[#8A6D1F]" />
+              <span>[HIDE_TAMPER_ZONES]</span>
             </>
           ) : (
             <>
-              <Eye className="h-4 w-4" />
-              <span>Show Tampered Zones</span>
+              <Eye className="h-3.5 w-3.5 text-[#8A6D1F]" />
+              <span>[SHOW_TAMPER_ZONES]</span>
             </>
           )}
         </button>
       </div>
 
-      {/* 2. Document Image inside relative positioned container */}
-      <div className="relative w-full rounded-xl overflow-hidden shadow-lg border border-slate-300/80 bg-slate-900 select-none">
+      {/* Coordinate Readout Bar */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border border-[#3A3D45] bg-[#1C1E22] px-3 py-1.5 font-mono text-[11px] text-[#A09D95]">
+        <div className="flex items-center gap-2">
+          <span className="text-[#8A6D1F] font-bold">COORDINATE_HUD:</span>
+          {hoveredOrSelected ? (
+            <span className="text-[#FAF7F0]">
+              ZONE #{hoveredOrSelected.id} :: x: <strong className="text-[#22C55E]">{hoveredOrSelected.x_pct}%</strong>, y: <strong className="text-[#22C55E]">{hoveredOrSelected.y_pct}%</strong>, w: {hoveredOrSelected.width_pct}%, h: {hoveredOrSelected.height_pct}%
+            </span>
+          ) : (
+            <span>HOVER_ZONE_TO_READ_COORDINATES</span>
+          )}
+        </div>
+        <div className="text-[10px] text-[#A09D95]/70">
+          PROJECTION: 1:1 CANONICAL_NORM
+        </div>
+      </div>
+
+      {/* Document Image inside relative container */}
+      <div className="relative w-full overflow-hidden border border-[#3A3D45] bg-[#151719] select-none">
         <img
           src={imageUrl || "/test_samples/sample_aadhaar.png"}
-          alt="Scanned Document Forensic Visualizer"
-          className="w-full h-auto object-contain block max-h-[640px] mx-auto"
+          alt="Forensic Visualizer Canvas"
+          className="w-full h-auto object-contain block max-h-[580px] mx-auto"
           loading="eager"
         />
 
-        {/* 3. The Interactive Bounding Boxes */}
+        {/* Interactive Bounding Boxes */}
         {showAnomalies &&
           activeAnomalies.map((a) => {
             const isHoveredOrActive = activeAnomalyId === a.id;
@@ -121,83 +137,59 @@ export function AnomalyViewer({
                   width: `${a.width_pct}%`,
                   height: `${a.height_pct}%`,
                 }}
-                className="absolute border-2 border-red-500 bg-red-500/20 cursor-crosshair group transition-all duration-150 hover:bg-red-500/35 hover:border-red-600 hover:ring-2 hover:ring-red-400/50"
+                className={`absolute border-2 cursor-crosshair group transition-all duration-150 ${
+                  isHoveredOrActive
+                    ? "border-rose-500 bg-rose-500/35 ring-1 ring-rose-400"
+                    : "border-rose-500/80 bg-rose-500/20 hover:bg-rose-500/30"
+                }`}
               >
                 {/* Visual anchor tag */}
-                <div className="absolute -top-3 -left-1 flex items-center justify-center h-5 px-1.5 rounded-full bg-red-600 text-white text-[10px] font-bold shadow-xs">
+                <div className="absolute -top-3 -left-1 flex items-center justify-center h-4 px-1 border border-rose-700 bg-rose-600 text-white font-mono text-[9px] font-bold">
                   #{a.id}
                 </div>
 
-                {/* 3. Hover Tooltip as a dark charcoal bubble */}
+                {/* Hover Tooltip */}
                 <div
-                  className={`absolute z-30 pointer-events-none whitespace-nowrap rounded-md bg-[#2A2C30] text-[#FAF7F0] text-xs px-3 py-1.5 shadow-xl border border-white/10 transition-all duration-200 ${
-                    // Position tooltip above if near bottom, otherwise below
+                  className={`absolute z-30 pointer-events-none whitespace-nowrap border border-[#3A3D45] bg-[#1C1E22] text-[#FAF7F0] font-mono text-[11px] px-2.5 py-1 transition-all duration-150 ${
                     a.y_pct > 65 ? "bottom-full mb-2" : "top-full mt-2"
                   } left-1/2 -translate-x-1/2 invisible opacity-0 group-hover:visible group-hover:opacity-100`}
                 >
-                  <div className="flex items-center gap-1.5 font-medium">
-                    <span className="text-amber-400 font-bold">⚠️</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-rose-400 font-bold">⚠️ [{a.x_pct}%, {a.y_pct}%]</span>
                     <span>{a.reason}</span>
                   </div>
-                  {/* Subtle tooltip arrow */}
-                  <div
-                    className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${
-                      a.y_pct > 65
-                        ? "top-full border-t-[#2A2C30]"
-                        : "bottom-full border-b-[#2A2C30]"
-                    }`}
-                  />
                 </div>
               </div>
             );
           })}
       </div>
 
-      {/* 4. Warning text below the image: Muted red #A23E3E */}
-      <div className="mt-4 flex items-start gap-2 text-xs font-medium text-[#A23E3E] bg-[#A23E3E]/10 border border-[#A23E3E]/20 rounded-lg p-3">
-        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[#A23E3E]" />
-        <p className="leading-relaxed">
-          <strong>Forensic Notice:</strong> {showAnomalies ? (
-            <span>
-              Highlighted bounding boxes mark coordinates flagged by deep learning noise analysis,
-              ORB copy-move clone detection, or UIDAI typographic template checks. Hover over any
-              flagged box to inspect the specific tampering vector.
-            </span>
-          ) : (
-            <span>
-              Click &quot;Show Tampered Zones&quot; above to project the machine-learned anomaly
-              bounding boxes directly onto the scanned document.
-            </span>
-          )}
-        </p>
-      </div>
-
-      {/* Anomaly list summary card when zones are shown */}
+      {/* Flagged Coordinates Breakdown Table */}
       {showAnomalies && activeAnomalies.length > 0 && (
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs font-bold text-[#2A2C30] uppercase tracking-wider mb-2.5">
-            Flagged Coordinates Breakdown
+        <div className="mt-3 border border-[#3A3D45] bg-[#1C1E22] p-3">
+          <div className="font-mono text-[10px] font-bold text-[#A09D95] uppercase tracking-wider mb-2">
+            Flagged Coordinates Matrix
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-1.5">
             {activeAnomalies.map((item) => (
               <div
                 key={item.id}
                 onMouseEnter={() => setActiveAnomalyId(item.id)}
                 onMouseLeave={() => setActiveAnomalyId(null)}
-                className={`rounded-lg border p-2.5 text-xs transition-all cursor-pointer ${
+                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border font-mono text-xs transition-colors cursor-pointer ${
                   activeAnomalyId === item.id
-                    ? "border-red-500 bg-red-50 ring-1 ring-red-400"
-                    : "border-slate-200 hover:border-slate-300 bg-[#FAF7F0]/50"
+                    ? "border-rose-500 bg-rose-950/30 text-[#FAF7F0]"
+                    : "border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:border-[#8A6D1F]"
                 }`}
               >
-                <div className="flex items-center justify-between font-mono text-[10px] text-slate-500 mb-1">
-                  <span className="font-bold text-red-700">Zone #{item.id}</span>
-                  <span>
-                    X:{item.x_pct}% Y:{item.y_pct}% · W:{item.width_pct}% H:{item.height_pct}%
+                <div className="flex items-center gap-2">
+                  <span className="command-badge bg-rose-950/60 text-rose-300 border-rose-800/60 text-[10px]">
+                    ZONE #{item.id}
                   </span>
+                  <span className="text-[11px] text-[#FAF7F0]">{item.reason}</span>
                 </div>
-                <div className="font-medium text-[#2A2C30] text-[11px] leading-snug">
-                  {item.reason}
+                <div className="text-[10px] text-[#A09D95] font-mono">
+                  x: <strong className="text-[#8A6D1F]">{item.x_pct}%</strong> y: <strong className="text-[#8A6D1F]">{item.y_pct}%</strong> [w:{item.width_pct}% h:{item.height_pct}%]
                 </div>
               </div>
             ))}

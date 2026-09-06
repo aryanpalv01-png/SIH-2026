@@ -1,14 +1,32 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { DocumentUploadPanel } from "@/components/DocumentUploadPanel";
-import { StatusSeal } from "@/components/StatusSeal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatMetricCard } from "@/components/common/StatMetricCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { fileToBase64, readLocalScans, writeLocalScan } from "@/lib/scanStore";
-import { analyzeDocumentDirectly, formatDate, formatDocumentType, makeDemoDocument, statusMeta, VerificationDocument, DocumentStatus } from "@/lib/veriscan";
-import { ArrowRight, FileCheck2, FileSearch, LockKeyhole, Plus, ShieldCheck, TrendingUp, ShieldAlert, Sparkles, Building2 } from "lucide-react";
+import {
+  analyzeDocumentDirectly,
+  formatDate,
+  formatDocumentType,
+  makeDemoDocument,
+  statusMeta,
+  VerificationDocument,
+  DocumentStatus,
+} from "@/lib/veriscan";
+import {
+  ArrowRight,
+  FileCheck2,
+  FileSearch,
+  LockKeyhole,
+  Plus,
+  ShieldCheck,
+  TrendingUp,
+  ShieldAlert,
+  Sparkles,
+  Terminal,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -17,7 +35,9 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const userIdentifier = user?.email || user?.openId || "guest";
-  const [localScans, setLocalScans] = useState<VerificationDocument[]>(() => readLocalScans(userIdentifier));
+  const [localScans, setLocalScans] = useState<VerificationDocument[]>(() =>
+    readLocalScans(userIdentifier)
+  );
   const [uploadError, setUploadError] = useState("");
   const currentFileRef = useRef<File | undefined>(undefined);
   const scansQuery = trpc.scans.list.useQuery(undefined, { retry: false });
@@ -54,7 +74,6 @@ export default function Dashboard() {
     },
   });
 
-  // Account-scoped scan records: server scans if authenticated, else user-scoped local scans
   const serverDocuments = useMemo(() => {
     if (!scansQuery.data || !Array.isArray(scansQuery.data)) return [];
     return (scansQuery.data as any[]).map((doc) => ({
@@ -98,22 +117,31 @@ export default function Dashboard() {
       const contentBase64 = await fileToBase64(file);
       previewUrl = `data:${file.type || "image/jpeg"};base64,${contentBase64}`;
       createScan.mutate(
-        { fileName: file.name, mimeType: file.type, fileSize: file.size, documentType: docType, contentBase64 },
+        {
+          fileName: file.name,
+          documentType: docType,
+          fileSize: file.size,
+          mimeType: file.type || "image/jpeg",
+          contentBase64,
+        },
         {
           onSuccess: (result) => {
-            writeLocalScan({
-              id: String(result.id),
-              filename: file.name,
-              type: docType,
-              uploadedAt: new Date().toISOString(),
-              status: result.status,
-              score: result.confidenceScore,
-              fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
-              mimeType: file.type || "image/jpeg",
-              reference: result.referenceCode,
-              previewUrl,
-              checks: [],
-            }, userIdentifier);
+            writeLocalScan(
+              {
+                id: String(result.id),
+                filename: file.name,
+                type: docType as any,
+                uploadedAt: new Date().toISOString(),
+                status: result.status,
+                score: result.confidenceScore,
+                fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
+                mimeType: file.type || "image/jpeg",
+                reference: result.referenceCode,
+                previewUrl,
+                checks: [],
+              },
+              userIdentifier
+            );
             setLocation(`/scan/${result.id}`);
           },
         }
@@ -139,28 +167,35 @@ export default function Dashboard() {
     : 0;
 
   return (
-    <div className="mx-auto max-w-[1380px] space-y-6">
-      {/* Top Welcome Banner with Indian Govt Tricolor Emblem */}
+    <div className="mx-auto max-w-[1440px] space-y-5">
+      {/* Top Welcome Header */}
       <PageHeader
         categoryHindi="भारत सरकार"
-        categoryEnglish="Govt of India · Forensic Workspace"
+        categoryEnglish="COMPLIANCE_WORKSPACE // FORENSIC_NODE"
         title={`Namaste${user?.name ? `, ${user.name.split(" ")[0]}` : ""}.`}
         subtitle={
           <>
-            Official document integrity workbench. Documents screened here are private and strictly isolated to your account (<span className="font-mono text-xs font-semibold text-slate-800">{user?.email || "Local Officer"}</span>).
+            Deterministic & heuristic document integrity verification. Ingested payloads are isolated to session (<span className="text-[#FAF7F0] font-semibold">{user?.email || "LOCAL_OFFICER"}</span>).
           </>
         }
-        accountBadge={user?.email ? `Vault: ${user.email}` : undefined}
+        accountBadge={user?.email ? `VAULT: ${user.email}` : undefined}
         actions={
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <Link href="/history">
-              <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg border-slate-300 font-semibold text-slate-700 hover:bg-slate-50">
-                View History <ArrowRight className="h-4 w-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 border-[#3A3D45] bg-[#1C1E22] text-[#D1CEC7] hover:bg-[#26282D] hover:text-[#FAF7F0] font-mono text-[11px]"
+              >
+                [AUDIT_LEDGER] <ArrowRight className="h-3 w-3" />
               </Button>
             </Link>
             <Link href="/verify">
-              <Button size="sm" className="h-9 gap-1.5 rounded-lg bg-saffron text-slate-950 font-bold hover:bg-saffron-dark hover:text-white shadow-xs">
-                <Plus className="h-4 w-4" /> New Verification
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/80 font-mono text-[11px] font-bold"
+              >
+                <Plus className="h-3 w-3" /> [NEW_VERIFICATION]
               </Button>
             </Link>
           </div>
@@ -168,171 +203,195 @@ export default function Dashboard() {
       />
 
       {uploadError && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs leading-relaxed text-rose-700 font-medium" role="alert">
-          {uploadError}
+        <div
+          className="border border-rose-500/50 bg-rose-950/30 px-4 py-2.5 font-mono text-xs text-rose-300"
+          role="alert"
+        >
+          [INGEST_ERROR] :: {uploadError}
         </div>
       )}
 
-      {/* Metric Cards - Official Indian Gov Palette */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Metrics Row */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatMetricCard
-          icon={<FileCheck2 className="h-5 w-5" />}
-          label="Documents Screened"
+          icon={<FileCheck2 className="h-4 w-4" />}
+          label="DOCUMENTS_SCREENED"
           value={String(allDocuments.length).padStart(2, "0")}
-          note="Across your private account ledger"
+          note="Vault-scoped audit count"
           accent="saffron"
         />
         <StatMetricCard
-          icon={<ShieldCheck className="h-5 w-5" />}
-          label="Verified Legitimate"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          label="VERIFIED_GENUINE"
           value={String(verifiedCount).padStart(2, "0")}
-          note={`${allDocuments.length ? Math.round((verifiedCount / allDocuments.length) * 100) : 0}% genuine rate`}
+          note={`${allDocuments.length ? Math.round((verifiedCount / allDocuments.length) * 100) : 0}% compliance rate`}
           accent="green"
         />
         <StatMetricCard
-          icon={<ShieldAlert className="h-5 w-5" />}
-          label="Flagged for Review"
+          icon={<ShieldAlert className="h-4 w-4" />}
+          label="FLAGGED_TAMPERED"
           value={String(reviewCount + forgedCount).padStart(2, "0")}
-          note={reviewCount + forgedCount > 0 ? "Requires physical scrutiny" : "Clear screening queue"}
-          accent="review"
+          note={reviewCount + forgedCount > 0 ? "Requires physical review" : "Queue nominal"}
+          accent="crimson"
         />
         <StatMetricCard
-          icon={<TrendingUp className="h-5 w-5" />}
-          label="Average Confidence"
-          value={allDocuments.length ? `${averageScore}/100` : "N/A"}
-          note="Multi-layer algorithm score"
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="AVERAGE_CONFIDENCE"
+          value={allDocuments.length ? `${averageScore} / 100` : "N/A"}
+          note="Bayesian fusion index"
           accent="navy"
         />
       </div>
 
-      {/* Screen a Document + Security Posture */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4.5 sm:p-7 shadow-xs">
-          <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      {/* Intake Dropzone + Detection Architecture */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+        <section className="terminal-panel p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between border-b border-[#3A3D45] pb-3">
             <div>
-              <span className="gov-pill text-[10px]">
-                Immediate Intake
+              <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40">
+                IMMEDIATE_INTAKE
               </span>
-              <h2 className="mt-1.5 font-serif text-lg sm:text-xl font-bold text-slate-900">Screen an Indian Credential</h2>
+              <h2 className="mt-1 font-serif text-lg font-bold text-[#FAF7F0]">
+                Ingest Indian Credential Specimen
+              </h2>
             </div>
-            <div className="hidden items-center gap-1.5 rounded-full border border-india-green/30 bg-india-green/10 px-3 py-1 text-xs font-semibold text-india-green sm:flex">
-              <LockKeyhole className="h-3.5 w-3.5" /> End-to-End Isolated
+            <div className="hidden items-center gap-1.5 border border-[#3A3D45] bg-[#1C1E22] px-2.5 py-1 font-mono text-[10.5px] text-[#22C55E] sm:flex">
+              <LockKeyhole className="h-3 w-3" /> [ISOLATED_SANDBOX]
             </div>
           </div>
           <DocumentUploadPanel compact disabled={createScan.isPending} onFile={handleFile} />
-          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-india-green" /> Aadhaar (UIDAI 2048-bit QR)</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-saffron" /> Income Tax PAN Card</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-ashoka" /> Indian Passport (ICAO 9303)</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-400" /> Academic Certificates</span>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[11px] text-[#A09D95]">
+            <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-[#22C55E]" /> Aadhaar (UIDAI 2048-bit QR)</span>
+            <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-[#8A6D1F]" /> Income Tax PAN Card</span>
+            <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-[#D1CEC7]" /> Indian Passport (ICAO 9303)</span>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4.5 sm:p-7 shadow-xs flex flex-col justify-between">
+        <section className="terminal-panel p-5 sm:p-6 flex flex-col justify-between font-mono">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-center justify-between border-b border-[#3A3D45] pb-3">
               <div>
-                <span className="gov-pill text-[10px]">
-                  Forensic Pipeline
+                <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40">
+                  SUBSYSTEM_TOPOLOGY
                 </span>
-                <h2 className="mt-1.5 font-serif text-lg sm:text-xl font-bold text-slate-900">Active Detection Layers</h2>
+                <h2 className="mt-1 font-serif text-lg font-bold text-[#FAF7F0]">
+                  Active Forensic Filters
+                </h2>
               </div>
-              <FileSearch className="h-6 w-6 text-saffron-dark" strokeWidth={1.5} />
+              <FileSearch className="h-5 w-5 text-[#8A6D1F]" strokeWidth={1.5} />
             </div>
-            <div className="mt-5 space-y-3.5">
-              <Posture label="Physical vs. Digital Classification" detail="Noise variance routing to prevent false positives on soft copies" />
-              <Posture label="Error Level Analysis (ELA)" detail="JPEG resaving and compression boundary forensics" />
-              <Posture label="Checksum & Typography OCR" detail="Verhoeff & PAN structural checksum verification" />
-              <Posture label="Deep Copy-Move & Clone SIFT" detail="Duplicated stamp, seal, or face patch localization" />
+            <div className="mt-4 space-y-3 text-xs">
+              <div className="border-b border-[#3A3D45]/60 pb-2">
+                <p className="font-bold text-[#FAF7F0]">01. DIHEDRAL_VERHOEFF_MATH</p>
+                <p className="text-[11px] text-[#A09D95] mt-0.5">D5 group permutation check on 12-digit Indian Aadhaar</p>
+              </div>
+              <div className="border-b border-[#3A3D45]/60 pb-2">
+                <p className="font-bold text-[#FAF7F0]">02. CRYPTOGRAPHIC_QR_RSA</p>
+                <p className="text-[11px] text-[#A09D95] mt-0.5">UIDAI root certificate asymmetric 2048-bit digital signature</p>
+              </div>
+              <div className="border-b border-[#3A3D45]/60 pb-2">
+                <p className="font-bold text-[#FAF7F0]">03. JPEG_ERROR_LEVEL_ANALYSIS</p>
+                <p className="text-[11px] text-[#A09D95] mt-0.5">8x8 DCT grid compression boundary variance</p>
+              </div>
+              <div className="pb-1">
+                <p className="font-bold text-[#FAF7F0]">04. COPY_MOVE_CLONE_SIFT</p>
+                <p className="text-[11px] text-[#A09D95] mt-0.5">Keypoint feature match for duplicated stamps & text patches</p>
+              </div>
             </div>
           </div>
-          <div className="mt-6 border-t border-slate-100 pt-4">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Building2 className="h-4 w-4 shrink-0 text-ashoka" />
-              <span>Developed in accordance with Indian Digital Public Infrastructure standards.</span>
-            </div>
+          <div className="mt-5 border-t border-[#3A3D45] pt-3 text-[10.5px] text-[#A09D95] flex items-center gap-2">
+            <Terminal className="h-3.5 w-3.5 text-[#8A6D1F]" />
+            <span>MeitY & Indian DPI Evidentiary Framework compliant.</span>
           </div>
         </section>
       </div>
 
-      {/* Recent Scans or Clean Empty State */}
-      <section className="space-y-4">
-        <div className="flex items-end justify-between">
-          <div>
-            <span className="gov-pill text-[10px]">
-              Account Audit Trail
+      {/* Recent Screening Records */}
+      <section className="space-y-3 font-mono">
+        <div className="flex items-center justify-between border-b border-[#3A3D45] pb-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-[10.5px] text-[#A09D95] uppercase tracking-wider">
+              RECENT_AUDIT_LEDGER ({allDocuments.length})
             </span>
-            <h2 className="mt-1 font-serif text-lg sm:text-xl font-bold text-slate-900">Your Latest Screening Reports</h2>
           </div>
           {allDocuments.length > 0 && (
-            <Link href="/history" className="hidden items-center text-xs font-bold text-saffron-dark hover:text-saffron sm:inline-flex gap-1">
-              View all reports ({allDocuments.length}) <ArrowRight className="h-3.5 w-3.5" />
+            <Link
+              href="/history"
+              className="text-[11px] text-[#8A6D1F] hover:text-[#D1CEC7] transition-colors flex items-center gap-1"
+            >
+              [VIEW_FULL_LEDGER] <ArrowRight className="h-3 w-3" />
             </Link>
           )}
         </div>
 
         {allDocuments.length === 0 ? (
           <EmptyState
-            icon={<Sparkles className="h-7 w-7" />}
-            title="No documents scanned yet under this account"
-            description="Your account workspace is completely clean. Documents you upload will be analyzed in real-time and stored strictly under your private account session."
-            actionLabel="Screen Your First Document"
+            icon={<Sparkles className="h-7 w-7 text-[#8A6D1F]" />}
+            title="NO_RECORDS_FOUND_IN_VAULT"
+            description="Account workspace is clean. Ingest a document above to initiate real-time multi-layered forensic inspection."
+            actionLabel="[SCREEN_FIRST_DOCUMENT]"
             actionHref="/verify"
           />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-            <div className="divide-y divide-slate-100">
-              {recentDocuments.map((document) => (
-                <Link
-                  key={document.id}
-                  href={`/report/${document.id}`}
-                  className="group flex flex-col gap-3 p-4 sm:px-6 sm:py-4.5 hover:bg-slate-50/80 sm:flex-row sm:items-center sm:justify-between transition-colors"
-                >
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <StatusSeal status={document.status} size="md" />
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900 group-hover:text-saffron-dark transition-colors truncate max-w-[240px] sm:max-w-md">
-                        {document.filename}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500 truncate">
-                        {formatDocumentType(document.type)} · {formatDate(document.uploadedAt)} · Ref: <span className="font-mono text-slate-700">{document.reference}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 sm:gap-8 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 sm:justify-end">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Confidence Score</p>
-                      <p className="mt-0.5 font-serif text-base font-bold text-slate-900">
-                        {document.score}
-                        <span className="font-sans text-xs font-normal text-slate-500">/100</span>
-                      </p>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-600 group-hover:text-saffron-dark inline-flex items-center">
-                      {statusMeta[document.status as DocumentStatus]?.label ?? "Verified"} <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+          <div className="terminal-panel overflow-x-auto">
+            <table className="dossier-table w-full text-left text-xs">
+              <thead>
+                <tr>
+                  <th className="py-2.5 px-3">REF_ID</th>
+                  <th className="py-2.5 px-3">DOCUMENT_FILE</th>
+                  <th className="py-2.5 px-3">TYPE</th>
+                  <th className="py-2.5 px-3">TIMESTAMP</th>
+                  <th className="py-2.5 px-3">CONFIDENCE</th>
+                  <th className="py-2.5 px-3">VERDICT</th>
+                  <th className="py-2.5 px-3 text-right">ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentDocuments.map((doc) => {
+                  const isVerified = doc.status === "verified";
+                  const isForged = doc.status === "likely_forged";
+
+                  return (
+                    <tr key={doc.id} className="hover:bg-[#1C1E22] transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-[#8A6D1F]">{doc.reference}</td>
+                      <td className="py-2.5 px-3 font-bold text-[#FAF7F0] max-w-xs truncate">{doc.filename}</td>
+                      <td className="py-2.5 px-3 text-[10.5px] text-[#A09D95] uppercase">{formatDocumentType(doc.type)}</td>
+                      <td className="py-2.5 px-3 text-[10.5px] text-[#A09D95]">{formatDate(doc.uploadedAt)}</td>
+                      <td className="py-2.5 px-3 font-bold font-serif text-sm">
+                        <span className={isVerified ? "text-[#22C55E]" : isForged ? "text-rose-400" : "text-amber-400"}>
+                          {doc.score}
+                        </span>
+                        <span className="font-sans text-[10px] text-[#A09D95]"> / 100</span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`command-badge text-[10px] font-bold ${
+                            isVerified
+                              ? "bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30"
+                              : isForged
+                              ? "bg-rose-950/60 text-rose-400 border-rose-800"
+                              : "bg-amber-950/60 text-amber-400 border-amber-800"
+                          }`}
+                        >
+                          [{statusMeta[doc.status as DocumentStatus]?.label?.toUpperCase() || "UNKNOWN"}]
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <Link
+                          href={`/report/${doc.id}`}
+                          className="inline-flex items-center gap-1 border border-[#3A3D45] bg-[#1C1E22] px-2 py-1 text-[10.5px] text-[#FAF7F0] hover:border-[#8A6D1F] hover:bg-[#26282D] transition-colors"
+                        >
+                          [OPEN_DOSSIER] <ArrowRight className="h-3 w-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
     </div>
   );
 }
-
-function Posture({ label, detail }: { label: string; detail: string }) {
-  return (
-    <div className="flex items-start gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-india-green/15 text-india-green text-xs font-bold mt-0.5">
-        ✓
-      </span>
-      <div>
-        <p className="text-xs font-bold text-slate-800">{label}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{detail}</p>
-      </div>
-    </div>
-  );
-}
-
-

@@ -210,35 +210,28 @@ export function DocumentUploadPanel({
         </div>
       ) : stagedFile ? (
         /* 2. Staged File Confirmation with Cancel Option */
-        <div className="rounded-2xl border-2 border-saffron/30 bg-white p-5 sm:p-6 shadow-md transition-all">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-india-green/10 text-india-green">
-                <CheckCircle2 className="h-4 w-4" />
+        <div className="terminal-panel p-4 sm:p-5 border border-[#3A3D45] bg-[#26282D] text-[#FAF7F0]">
+          <div className="flex items-center justify-between border-b border-[#3A3D45] pb-3">
+            <div className="flex items-center gap-2">
+              <span className="command-badge command-badge-verified">STAGED</span>
+              <span className="font-mono text-xs font-semibold text-slate-300">
+                Payload Ready for Ingestion
               </span>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  Document Ready for Screening
-                </p>
-                <p className="text-xs text-slate-500">
-                  Inspect selection before running multi-layer analysis
-                </p>
-              </div>
             </div>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleCancelStaged}
-              className="text-red-600 hover:bg-red-50 hover:text-red-700 text-xs font-bold"
+              className="text-red-400 hover:bg-red-950/40 hover:text-red-300 text-xs font-mono h-7 px-2"
             >
-              <X className="mr-1 h-3.5 w-3.5" /> Discard
+              <X className="mr-1 h-3.5 w-3.5" /> DISCARD
             </Button>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-[130px_1fr] items-center">
+          <div className="mt-4 grid gap-4 sm:grid-cols-[110px_1fr] items-center">
             {stagedPreviewUrl ? (
-              <div className="aspect-[1.3/1] w-full max-w-[160px] sm:max-w-none mx-auto sm:mx-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shadow-inner">
+              <div className="aspect-[1.2/1] w-full max-w-[140px] sm:max-w-none mx-auto sm:mx-0 overflow-hidden border border-[#3A3D45] bg-[#181A1D] flex items-center justify-center">
                 <img
                   src={stagedPreviewUrl}
                   alt="Selected Document"
@@ -246,37 +239,37 @@ export function DocumentUploadPanel({
                 />
               </div>
             ) : (
-              <div className="aspect-[1.3/1] w-full max-w-[160px] sm:max-w-none mx-auto sm:mx-0 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400">
-                <FileUp className="h-8 w-8 text-saffron-dark" />
+              <div className="aspect-[1.2/1] w-full max-w-[140px] sm:max-w-none mx-auto sm:mx-0 border border-[#3A3D45] bg-[#181A1D] flex items-center justify-center text-slate-500">
+                <FileUp className="h-6 w-6 text-[#8A6D1F]" />
               </div>
             )}
 
-            <div className="space-y-1 text-center sm:text-left">
-              <p className="font-bold text-slate-900 text-sm truncate max-w-[340px] mx-auto sm:mx-0">
+            <div className="space-y-1.5 text-center sm:text-left">
+              <p className="font-mono text-xs font-bold text-white truncate max-w-[320px] mx-auto sm:mx-0">
                 {stagedFile.name}
               </p>
-              <p className="text-xs text-slate-500">
-                Size: {(stagedFile.size / (1024 * 1024)).toFixed(2)} MB · Format: {stagedFile.type || "Document"}
+              <p className="font-mono text-[11px] text-slate-400">
+                PAYLOAD: {(stagedFile.size / (1024 * 1024)).toFixed(2)} MB · MIME: {stagedFile.type || "binary"}
               </p>
 
-              <div className="pt-2.5 flex flex-col sm:flex-row flex-wrap gap-2.5">
+              <div className="pt-2 flex flex-col sm:flex-row flex-wrap gap-2">
                 <Button
                   type="button"
                   disabled={disabled}
                   onClick={handleConfirmUpload}
-                  className="w-full sm:w-auto bg-saffron text-slate-950 hover:bg-saffron/90 font-bold text-xs h-9 px-5 shadow-xs"
+                  className="w-full sm:w-auto bg-[#8A6D1F] hover:bg-[#A28126] text-white font-mono font-bold text-xs h-8 px-4 rounded-xs"
                 >
-                  <ScanSearch className="mr-2 h-4 w-4" />
-                  {disabled ? "Screening Document…" : "Verify This Document"}
+                  <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
+                  {disabled ? "EXECUTING PIPELINE…" : "RUN FORENSIC SCREENING"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancelStaged}
                   disabled={disabled}
-                  className="w-full sm:w-auto border-red-200 bg-red-50/50 text-red-600 hover:bg-red-100/60 font-semibold text-xs h-9 px-3.5"
+                  className="w-full sm:w-auto border-[#3A3D45] bg-[#181A1D] text-slate-400 hover:text-white font-mono text-xs h-8 px-3 rounded-xs"
                 >
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Wrong Image? Cancel
+                  <Trash2 className="mr-1 h-3 w-3" /> CANCEL
                 </Button>
               </div>
             </div>
@@ -285,8 +278,8 @@ export function DocumentUploadPanel({
       ) : (
         /* 3. Default Upload Dropzone with Choose File & Camera Scan */
         <div
-          className={`upload-dropzone ${isDragging ? "upload-dropzone-active" : ""} ${
-            disabled ? "pointer-events-none opacity-70" : ""
+          className={`upload-dropzone border border-[#3A3D45] bg-[#26282D] ${isDragging ? "!border-[#8A6D1F] !bg-[#2D3037]" : ""} ${
+            disabled ? "pointer-events-none opacity-60" : ""
           }`}
           onDragEnter={(event) => {
             if (disabled) return;
@@ -308,76 +301,77 @@ export function DocumentUploadPanel({
             accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
             onChange={(event) => handleSelectFile(event.target.files?.[0])}
           />
-          <div className="upload-icon-wrap">
-            <FileUp className="h-6 w-6 text-saffron" strokeWidth={1.8} />
+          <div className="flex h-10 w-10 items-center justify-center border border-[#8A6D1F] bg-[#181A1D] text-[#8A6D1F]">
+            <FileUp className="h-5 w-5" strokeWidth={1.75} />
           </div>
 
           <div className="max-w-md text-center mt-3">
-            <p className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Upload or Capture a Document
-            </p>
-            <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-slate-500">
-              Drop an official identity card, certificate, or statement. You can also take a photo directly via camera.
+            <h3 className="font-serif text-lg sm:text-xl font-bold text-white tracking-tight">
+              Ingest Document for Forensic Screening
+            </h3>
+            <p className="mt-1 font-mono text-xs text-slate-400 leading-relaxed">
+              Drag file here or select from local storage / optical camera
             </p>
           </div>
 
-          <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 w-full max-w-xs sm:max-w-none mx-auto">
+          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 w-full max-w-xs sm:max-w-none mx-auto">
             <Button
               type="button"
               disabled={disabled}
-              className="w-full sm:w-auto bg-saffron text-slate-950 hover:bg-saffron/90 font-bold text-xs h-10 px-5 shadow-xs"
+              className="w-full sm:w-auto bg-[#8A6D1F] hover:bg-[#A28126] text-white font-mono font-bold text-xs h-8.5 px-4 rounded-xs"
               onClick={() => inputRef.current?.click()}
             >
-              <ScanSearch className="mr-2 h-4 w-4" />
-              {disabled ? "Uploading securely…" : "Choose Document"}
+              <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
+              {disabled ? "INGESTING…" : "SELECT FILE"}
             </Button>
             <Button
               type="button"
               variant="outline"
               disabled={disabled}
-              className="w-full sm:w-auto border-slate-300 bg-white text-slate-800 hover:border-saffron hover:text-saffron-dark font-bold text-xs h-10 px-4 shadow-xs transition-colors"
+              className="w-full sm:w-auto border-[#3A3D45] bg-[#181A1D] text-slate-300 hover:border-[#8A6D1F] hover:text-[#8A6D1F] font-mono text-xs h-8.5 px-3.5 rounded-xs transition-colors"
               onClick={startCamera}
             >
-              <Camera className="mr-2 h-4 w-4 text-saffron-dark" />
-              Scan with Camera
+              <Camera className="mr-1.5 h-3.5 w-3.5 text-[#8A6D1F]" />
+              OPTICAL CAMERA
             </Button>
           </div>
 
-          <p className="mt-3 text-[10.5px] uppercase tracking-wider font-semibold text-slate-400">
-            PDF, JPG, PNG, or WEBP · up to 10 MB
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-slate-500">
+            PDF · JPG · PNG · WEBP · MAX 10 MB
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11.5px] text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <LockKeyhole className="h-3.5 w-3.5 text-saffron-dark" /> HMAC Encrypted Vault
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[11px] text-slate-400">
+            <span className="inline-flex items-center gap-1">
+              <LockKeyhole className="h-3 w-3 text-[#8A6D1F]" /> CLIENT ENCLAVE
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <FileCheck2 className="h-3.5 w-3.5 text-india-green" /> Zero-Disk Processing
+            <span className="text-[#3A3D45]">|</span>
+            <span className="inline-flex items-center gap-1">
+              <FileCheck2 className="h-3 w-3 text-[#22C55E]" /> ZERO DISK RETENTION
             </span>
           </div>
 
-          {/* Quick Test Benchmark Samples */}
-          <div className="mt-5 border-t border-slate-100 pt-3.5 w-full text-center">
-            <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-2">
-              Or test with forensic benchmark specimens:
+          {/* Forensic Benchmark Specimen Chips */}
+          <div className="mt-4 border-t border-[#3A3D45] pt-3 w-full text-center">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-2">
+              LOAD COMPLIANCE BENCHMARK SPECIMEN:
             </p>
             <div className="flex flex-wrap justify-center gap-1.5">
               {[
-                { id: "doc-aadhaar-valid", label: "Genuine Aadhaar", tone: "verified" },
-                { id: "doc-aadhaar-forged", label: "Forged Aadhaar (Verhoeff Fail)", tone: "forged" },
-                { id: "doc-pan-forged", label: "Invalid PAN", tone: "forged" },
-                { id: "doc-photoshop-spliced", label: "Photoshop Spliced", tone: "forged" },
+                { id: "doc-aadhaar-valid", label: "GENUINE_AADHAAR", tone: "verified" },
+                { id: "doc-aadhaar-forged", label: "VERHOEFF_CHECKSUM_FAIL", tone: "forged" },
+                { id: "doc-pan-forged", label: "INVALID_PAN_STRUCT", tone: "forged" },
+                { id: "doc-photoshop-spliced", label: "SPLICED_CLONE_MATCH", tone: "forged" },
               ].map((sample) => (
                 <a
                   key={sample.id}
                   href={`/report/${sample.id}`}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-all ${
+                  className={`font-mono text-[10px] px-2 py-0.5 border rounded-xs transition-all ${
                     sample.tone === "verified"
-                      ? "border-india-green/30 bg-india-green/5 text-india-green-dark hover:bg-india-green hover:text-white"
-                      : "border-red-200 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white"
+                      ? "border-[#22C55E]/40 bg-[#22C55E]/10 text-emerald-400 hover:bg-[#22C55E]/20"
+                      : "border-red-900/50 bg-red-950/30 text-red-400 hover:bg-red-900/40"
                   }`}
                 >
-                  {sample.label}
+                  [{sample.label}]
                 </a>
               ))}
             </div>
@@ -387,10 +381,10 @@ export function DocumentUploadPanel({
 
       {error && (
         <p
-          className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700"
+          className="mt-2 border border-red-900/60 bg-red-950/40 px-3 py-2 font-mono text-xs text-red-400"
           role="alert"
         >
-          {error}
+          [ERROR] {error}
         </p>
       )}
     </div>

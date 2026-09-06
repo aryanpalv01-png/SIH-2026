@@ -62,7 +62,7 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user, logout, quickLogin } = useAuth();
+  const { loading, user, logout } = useAuth();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -72,39 +72,39 @@ export default function DashboardLayout({
 
   if (!user && !allowGuest) {
     return (
-      <div className="flex min-h-screen flex-col bg-[#0A192F] text-slate-100">
+      <div className="flex min-h-screen flex-col bg-[#1C1E22] text-[#FAF7F0]">
         <GovMasthead theme="dark" />
 
         <div className="flex flex-1 items-center justify-center px-4 py-12">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/15 bg-[#0F243E] p-8 text-center shadow-2xl">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-saffron/40 bg-saffron/15 text-saffron shadow-xs">
-              <AshokaChakra className="h-8 w-8 text-saffron" />
+          <div className="w-full max-w-md terminal-panel p-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-[#8A6D1F] bg-[#1C1E22] text-[#8A6D1F]">
+              <AshokaChakra className="h-7 w-7 text-[#8A6D1F]" />
             </div>
 
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-saffron/30 bg-saffron/10 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-saffron">
-              <span>🇮🇳</span> भारत सरकार · GOVT OF INDIA
-            </div>
+            <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 font-bold">
+              🇮🇳 भारत सरकार · NATIONAL COMPLIANCE TERMINAL
+            </span>
 
-            <h1 className="mt-4 font-serif text-2xl font-bold tracking-tight text-white">
-              Access National Forensic Portal
+            <h1 className="mt-4 font-serif text-2xl font-bold tracking-tight text-[#FAF7F0]">
+              Access Institutional Forensic Workspace
             </h1>
 
-            <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Sign in with your government or institutional credentials to access document screening, forensic heatmaps, and cryptographic reports.
+            <p className="mt-2 text-xs leading-relaxed text-[#A09D95]">
+              Screening records are strictly isolated and cryptographically signed. Authenticate with verified credentials.
             </p>
 
             <div className="mt-6">
               <Button
                 onClick={() => (window.location.href = "/auth/login")}
                 size="lg"
-                className="w-full bg-saffron text-slate-950 hover:bg-saffron-dark hover:text-white font-bold text-xs h-11 shadow-xs"
+                className="w-full border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/85 font-mono font-bold text-xs h-10"
               >
-                Sign In with Official Email OTP
+                [SIGN_IN_WITH_EMAIL_OTP]
               </Button>
             </div>
 
-            <p className="mt-6 text-[11px] font-medium text-slate-500">
-              सत्यमेव जयते · Secure National Document Forensic System
+            <p className="mt-6 font-mono text-[10px] text-[#A09D95]">
+              सत्यमेव जयते · Evidentiary Document Screening Node
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#FAF7F0]">
+    <div className="flex min-h-screen w-full flex-col bg-[#1C1E22] text-[#FAF7F0]">
       {/* Official Government of India Top Masthead */}
       <GovMasthead theme="dark" />
 
@@ -191,14 +191,14 @@ function DashboardLayoutContent({
         <div ref={sidebarRef} className="relative">
           <Sidebar
             collapsible="icon"
-            className="border-white/10 bg-[#2A2C30] text-[#FAF7F0]"
+            className="border-r border-[#3A3D45] bg-[#1C1E22] text-[#FAF7F0]"
             disableTransition={isResizing}
           >
-            <SidebarHeader className="h-20 justify-center border-b border-white/10 px-3">
+            <SidebarHeader className="h-16 justify-center border-b border-[#3A3D45] px-3 bg-[#1C1E22]">
               <div className="flex items-center gap-3 px-2">
                 <button
                   onClick={toggleSidebar}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 text-slate-300 transition-colors hover:border-saffron/50 hover:text-saffron focus:outline-none"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:border-[#8A6D1F] hover:text-[#FAF7F0] focus:outline-none transition-colors"
                   aria-label="Toggle navigation"
                 >
                   <PanelLeft className="h-4 w-4" />
@@ -206,26 +206,26 @@ function DashboardLayoutContent({
                 {!isCollapsed && (
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="font-serif text-lg font-bold tracking-tight text-white">
+                      <p className="font-serif text-base font-bold tracking-tight text-[#FAF7F0]">
                         VeriScan
                       </p>
-                      <span className="rounded bg-saffron/20 px-1.5 py-0.2 text-[8px] font-bold uppercase tracking-wider text-saffron border border-saffron/30">
-                        OFFICIAL
+                      <span className="command-badge bg-[#8A6D1F]/20 text-[#D1CEC7] border-[#8A6D1F]/50 text-[8px] font-bold">
+                        TERMINAL
                       </span>
                     </div>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400">
-                      राष्ट्रीय सत्यता पोर्टल
+                    <p className="font-mono text-[9px] uppercase tracking-wider text-[#A09D95]">
+                      राष्ट्रीय सत्यता नोड
                     </p>
                   </div>
                 )}
               </div>
             </SidebarHeader>
 
-            <SidebarContent className="px-3 py-5">
-              <p className="eyebrow mb-3 px-3 text-slate-400 group-data-[collapsible=icon]:hidden">
-                Workspace Modules
+            <SidebarContent className="px-3 py-4 bg-[#1C1E22]">
+              <p className="font-mono text-[9.5px] uppercase tracking-wider mb-2.5 px-2 text-[#A09D95] group-data-[collapsible=icon]:hidden">
+                TERMINAL_MODULES
               </p>
-              <SidebarMenu className="gap-1.5">
+              <SidebarMenu className="gap-1 font-mono">
                 {menuItems.map((item) => {
                   const isActive =
                     location === item.path ||
@@ -236,14 +236,14 @@ function DashboardLayoutContent({
                         isActive={isActive}
                         onClick={() => setLocation(item.path)}
                         tooltip={item.label}
-                        className={`h-11 rounded-xl px-3 transition-all duration-150 ${
+                        className={`h-9 px-2.5 transition-all text-xs border ${
                           isActive
-                            ? "bg-saffron text-slate-950 font-bold shadow-xs hover:bg-saffron"
-                            : "text-slate-300 hover:bg-white/8 hover:text-white"
+                            ? "border-[#8A6D1F] bg-[#8A6D1F]/20 text-[#FAF7F0] font-bold"
+                            : "border-transparent text-[#A09D95] hover:bg-[#26282D] hover:text-[#FAF7F0] hover:border-[#3A3D45]"
                         }`}
                       >
-                        <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
-                        <span className="text-xs font-semibold tracking-wide">
+                        <item.icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+                        <span className="text-[11px] tracking-wide">
                           {item.label}
                         </span>
                       </SidebarMenuButton>
@@ -254,66 +254,66 @@ function DashboardLayoutContent({
 
               {!isCollapsed && (
                 <div className="mt-auto px-2 pt-6">
-                  <div className="rounded-xl border border-white/10 bg-[#0F243E] p-3.5 shadow-inner">
-                    <div className="flex items-center gap-2 text-india-green">
-                      <ShieldCheck className="h-4 w-4 shrink-0" strokeWidth={2} />
-                      <span className="text-xs font-semibold text-white">
-                        Account-Scoped Vault
+                  <div className="border border-[#3A3D45] bg-[#26282D] p-3 font-mono text-xs">
+                    <div className="flex items-center gap-1.5 text-[#22C55E]">
+                      <ShieldCheck className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                      <span className="text-[11px] font-bold text-[#FAF7F0]">
+                        AUDIT_ISOLATION
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                      Screening records are strictly isolated and encrypted under your credentials.
+                    <p className="mt-1 text-[10px] leading-relaxed text-[#A09D95]">
+                      Local memory sandbox. Screened records are account-scoped.
                     </p>
                   </div>
                 </div>
               )}
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-white/10 p-3">
+            <SidebarFooter className="border-t border-[#3A3D45] p-3 bg-[#1C1E22]">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/8 focus:outline-none group-data-[collapsible=icon]:justify-center">
-                    <Avatar className="h-9 w-9 border border-saffron/40 bg-saffron/10">
-                      <AvatarFallback className="bg-saffron/20 text-xs font-bold text-saffron">
+                  <button className="flex w-full items-center gap-2.5 p-1.5 text-left border border-transparent hover:border-[#3A3D45] hover:bg-[#26282D] transition-colors focus:outline-none group-data-[collapsible=icon]:justify-center font-mono">
+                    <Avatar className="h-7 w-7 border border-[#8A6D1F]/50 bg-[#1C1E22]">
+                      <AvatarFallback className="bg-[#8A6D1F]/20 text-[10px] font-bold text-[#D1CEC7]">
                         {getInitials(user?.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                      <p className="truncate text-xs font-bold text-white">
-                        {user?.name || "Government Officer"}
+                      <p className="truncate text-[11px] font-bold text-[#FAF7F0]">
+                        {user?.name || "OFFICER"}
                       </p>
-                      <p className="truncate font-mono text-[10.5px] text-slate-400">
-                        {user?.email || "Account Holder"}
+                      <p className="truncate font-mono text-[9.5px] text-[#A09D95]">
+                        {user?.email || "ACCOUNT"}
                       </p>
                     </div>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-60 rounded-xl border border-slate-200 bg-white p-1 text-slate-900 shadow-xl"
+                  className="w-56 border border-[#3A3D45] bg-[#26282D] p-1 text-[#FAF7F0] font-mono shadow-none"
                 >
-                  <div className="border-b border-slate-100 p-2.5 text-xs">
-                    <p className="font-bold text-slate-900">{user?.name}</p>
-                    <p className="truncate font-mono text-[11px] text-slate-500">
+                  <div className="border-b border-[#3A3D45] p-2 text-xs">
+                    <p className="font-bold text-[#FAF7F0]">{user?.name}</p>
+                    <p className="truncate text-[10px] text-[#A09D95]">
                       {user?.email}
                     </p>
-                    <span className="mt-1.5 inline-block rounded-md bg-saffron/15 px-2 py-0.5 text-[10px] font-bold text-saffron-dark uppercase">
-                      Role: {user?.role || "analyst"}
+                    <span className="mt-1 inline-block command-badge bg-[#8A6D1F]/20 text-[#D1CEC7] border-[#8A6D1F] text-[9px]">
+                      ROLE: {user?.role || "analyst"}
                     </span>
                   </div>
                   <DropdownMenuItem
                     onClick={() => logout()}
-                    className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-semibold text-red-600 focus:bg-red-50 focus:text-red-700"
+                    className="cursor-pointer px-2 py-1.5 text-xs text-rose-400 hover:bg-[#1C1E22] focus:bg-[#1C1E22] focus:text-rose-300"
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign Out Immediately</span>
+                    <LogOut className="mr-2 h-3.5 w-3.5" />
+                    <span>[SIGN_OUT]</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarFooter>
           </Sidebar>
           <div
-            className={`absolute right-0 top-0 z-50 h-full w-1 cursor-col-resize transition-colors hover:bg-saffron ${
+            className={`absolute right-0 top-0 z-50 h-full w-1 cursor-col-resize transition-colors hover:bg-[#8A6D1F] bg-[#3A3D45] ${
               isCollapsed ? "hidden" : ""
             }`}
             onMouseDown={() => setIsResizing(true)}
@@ -321,17 +321,17 @@ function DashboardLayoutContent({
         </div>
 
         {/* Main Content Pane */}
-        <SidebarInset className="min-h-screen bg-[#FAF7F0] text-[#2A2C30]">
+        <SidebarInset className="min-h-screen bg-[#1C1E22] text-[#FAF7F0]">
           {isMobile && (
-            <div className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-[#E2DBD0] bg-[#FAF7F0]/95 px-4 backdrop-blur-md">
-              <SidebarTrigger className="h-9 w-9 rounded-lg border border-slate-200" />
-              <span className="font-serif text-base font-bold text-slate-900">
+            <div className="sticky top-0 z-40 flex h-12 items-center gap-3 border-b border-[#3A3D45] bg-[#1C1E22] px-4 font-mono">
+              <SidebarTrigger className="h-8 w-8 border border-[#3A3D45] bg-[#26282D]" />
+              <span className="font-serif text-sm font-bold text-[#FAF7F0]">
                 {activeMenuItem.label}
               </span>
             </div>
           )}
-          <main className="p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-[1400px]">{children}</div>
+          <main className="p-4 sm:p-6 lg:p-7">
+            <div className="mx-auto max-w-[1440px]">{children}</div>
           </main>
         </SidebarInset>
       </div>

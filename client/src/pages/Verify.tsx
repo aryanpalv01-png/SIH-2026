@@ -1,12 +1,19 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { DocumentUploadPanel } from "@/components/DocumentUploadPanel";
-import { VeriScanMark } from "@/components/VeriScanLogo";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { fileToBase64, writeLocalScan } from "@/lib/scanStore";
 import { analyzeDocumentDirectly, makeDemoDocument } from "@/lib/veriscan";
-import { ArrowLeft, FileImage, FileText, Info, LockKeyhole, ShieldCheck, Building2, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  FileImage,
+  FileText,
+  LockKeyhole,
+  ShieldCheck,
+  Building2,
+  Terminal,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -47,7 +54,9 @@ export default function Verify() {
         }
       }
       setUploadError(error.message || "Upload processing error");
-      toast.info("Upload notice", { description: error.message || "Document analysis completed with client inspection." });
+      toast.info("Upload notice", {
+        description: error.message || "Document analysis completed with client inspection.",
+      });
     },
   });
 
@@ -67,22 +76,31 @@ export default function Verify() {
       const contentBase64 = await fileToBase64(file);
       previewUrl = `data:${file.type || "image/jpeg"};base64,${contentBase64}`;
       createScan.mutate(
-        { fileName: file.name, mimeType: file.type, fileSize: file.size, documentType: docType, contentBase64 },
+        {
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          documentType: docType,
+          contentBase64,
+        },
         {
           onSuccess: (result) => {
-            writeLocalScan({
-              id: String(result.id),
-              filename: file.name,
-              type: docType,
-              uploadedAt: new Date().toISOString(),
-              status: result.status,
-              score: result.confidenceScore,
-              fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
-              mimeType: file.type || "image/jpeg",
-              reference: result.referenceCode,
-              previewUrl,
-              checks: [],
-            }, userIdentifier);
+            writeLocalScan(
+              {
+                id: String(result.id),
+                filename: file.name,
+                type: docType,
+                uploadedAt: new Date().toISOString(),
+                status: result.status,
+                score: result.confidenceScore,
+                fileSize: `${Math.max(0.1, file.size / 1024 / 1024).toFixed(1)} MB`,
+                mimeType: file.type || "image/jpeg",
+                reference: result.referenceCode,
+                previewUrl,
+                checks: [],
+              },
+              userIdentifier
+            );
             setLocation(`/scan/${result.id}`);
           },
         }
@@ -101,96 +119,104 @@ export default function Verify() {
   };
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6">
+    <div className="mx-auto max-w-[1440px] space-y-5">
       <PageHeader
         categoryHindi="दस्तावेज़ सत्यापन"
-        categoryEnglish="Digital Document Intake"
-        title="National Document Forensic Screening"
-        subtitle="Upload an Indian citizen identity document, credential, or financial certificate for real-time multi-layered forensic inspection."
-        accountBadge={user?.email ? `Active: ${user.email}` : undefined}
+        categoryEnglish="INGESTION_GATEWAY // SPECIMEN_INTAKE"
+        title="Institutional Document Forensic Screening"
+        subtitle="Ingest an Indian citizen identity document or certificate for real-time multi-layered forensic inspection."
+        accountBadge={user?.email ? `VAULT: ${user.email}` : undefined}
         actions={
           <Link href="/dashboard">
-            <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-lg border-slate-300 font-semibold text-slate-700 hover:bg-slate-50">
-              <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 border-[#3A3D45] bg-[#1C1E22] text-[#D1CEC7] hover:bg-[#26282D] hover:text-[#FAF7F0] font-mono text-[11px]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> [RETURN_TO_DASHBOARD]
             </Button>
           </Link>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[0.88fr_1.12fr] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
         {/* Left Column: Security Protocol & Advisories */}
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
-            <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-              <Sparkles className="h-4 w-4 text-saffron-dark" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-                Inspection Protocols & Vault Privacy
+        <div className="space-y-4 font-mono text-xs">
+          <div className="terminal-panel p-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-[#3A3D45]">
+              <Terminal className="h-4 w-4 text-[#8A6D1F]" />
+              <h2 className="text-[10.5px] font-bold uppercase tracking-wider text-[#FAF7F0]">
+                INSPECTION_PROTOCOLS // AIR_GAPPED
               </h2>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-4 space-y-3.5">
               <InfoRow
-                icon={<ShieldCheck className="h-5 w-5 text-india-green" />}
-                title="Private User Account Ledger"
-                body={`Your uploaded files and reports are strictly scoped to ${user?.email || "your active account"}. No data is shared across different accounts.`}
+                icon={<ShieldCheck className="h-4 w-4 text-[#22C55E]" />}
+                title="ACCOUNT_SCOPED_VAULT"
+                body={`Screened payloads and cryptographic digests are strictly isolated to ${user?.email || "active account session"}.`}
               />
               <InfoRow
-                icon={<LockKeyhole className="h-5 w-5 text-saffron-dark" />}
-                title="Zero-Disk In-Memory Processing"
-                body="Processed entirely in RAM with explicit garbage collection wiping sensitive document data upon inspection conclusion."
+                icon={<LockKeyhole className="h-4 w-4 text-[#8A6D1F]" />}
+                title="VOLATILE_MEMORY_SANDBOX"
+                body="Processed in volatile memory buffer with immediate GC cycle discarding payload bytes post-compilation."
               />
               <InfoRow
-                icon={<Building2 className="h-5 w-5 text-ashoka" />}
-                title="Indian Document Optimization"
-                body="Calibrated for UIDAI 2048-bit QR codes, Verhoeff checksums, Income Tax PAN structural regex, and ICAO 9303 passports."
+                icon={<Building2 className="h-4 w-4 text-[#D1CEC7]" />}
+                title="DPI_CALIBRATED_PIPELINE"
+                body="Deterministic Verhoeff math, 2048-bit UIDAI QR signatures, and Income Tax structural regex."
               />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/90 bg-slate-50/80 p-5 shadow-xs">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 shrink-0 text-saffron-dark mt-0.5" />
-              <div className="space-y-1 text-xs leading-relaxed text-slate-600">
-                <p className="font-bold text-slate-900">
-                  Advisory for Verifying Officers:
-                </p>
-                <p>
-                  For highest precision, ensure the full document perimeter is captured with adequate contrast. Soft-copy PDFs and screenshots are automatically routed through noise-variance analysis to suppress false tampering alerts.
-                </p>
-              </div>
-            </div>
+          <div className="terminal-panel p-4 border border-[#3A3D45] bg-[#1C1E22]">
+            <p className="font-bold text-[#FAF7F0] mb-1 text-[11px]">
+              EXAMINER_GUIDELINE:
+            </p>
+            <p className="text-[10.5px] text-[#A09D95] leading-relaxed font-sans">
+              Ensure the entire document border is visible with sufficient contrast. Native PDF soft-copies automatically bypass sensor-grain noise tests to prevent false compression penalties.
+            </p>
           </div>
         </div>
 
         {/* Right Column: Document Intake Panel */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
-          <div className="tiranga-stripe" />
-          <div className="p-6 sm:p-7">
-            <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <VeriScanMark size="sm" />
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-slate-900">Intake Document</h3>
-                  <p className="text-xs text-slate-500">Drag and drop, browse, or capture via camera</p>
-                </div>
-              </div>
-              <span className="rounded-full border border-india-green/30 bg-india-green/10 px-2.5 py-0.5 text-[11px] font-bold text-india-green uppercase">
-                Secure Channel
+        <div className="terminal-panel p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between border-b border-[#3A3D45] pb-3">
+            <div>
+              <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 font-mono text-[10px]">
+                INTAKE_CHANNEL
               </span>
+              <h3 className="font-serif text-lg font-bold text-[#FAF7F0] mt-1">
+                Upload Target Specimen
+              </h3>
             </div>
+            <span className="command-badge bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30 font-mono text-[10px]">
+              [ENCRYPTED_STREAM]
+            </span>
+          </div>
 
-            <DocumentUploadPanel disabled={createScan.isPending} onFile={handleFile} />
+          <DocumentUploadPanel disabled={createScan.isPending} onFile={handleFile} />
 
-            {uploadError && (
-              <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs leading-relaxed text-rose-700 font-medium" role="alert">
-                {uploadError}
-              </p>
-            )}
+          {uploadError && (
+            <p
+              className="mt-3 border border-rose-500/50 bg-rose-950/30 p-2.5 font-mono text-xs text-rose-300"
+              role="alert"
+            >
+              [ERROR] :: {uploadError}
+            </p>
+          )}
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <FormatCard icon={<FileText className="h-4 w-4 text-saffron-dark" />} label="Digital PDF" detail="Official e-Aadhaar / e-PAN" />
-              <FormatCard icon={<FileImage className="h-4 w-4 text-india-green" />} label="Scanned Image" detail="JPG, PNG up to 10MB" />
-            </div>
+          <div className="mt-4 grid grid-cols-2 gap-2.5 font-mono text-xs">
+            <FormatCard
+              icon={<FileText className="h-3.5 w-3.5 text-[#8A6D1F]" />}
+              label="DIGITAL_PDF"
+              detail="e-Aadhaar / e-PAN Softcopy"
+            />
+            <FormatCard
+              icon={<FileImage className="h-3.5 w-3.5 text-[#22C55E]" />}
+              label="RASTER_IMAGE"
+              detail="JPG, PNG, WebP (≤15MB)"
+            />
           </div>
         </div>
       </div>
@@ -198,30 +224,44 @@ export default function Verify() {
   );
 }
 
-function InfoRow({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+function InfoRow({
+  icon,
+  title,
+  body,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
   return (
-    <div className="flex gap-3.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 shadow-2xs">
+    <div className="flex gap-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center border border-[#3A3D45] bg-[#1C1E22]">
         {icon}
       </span>
       <div>
-        <p className="text-xs font-bold text-slate-900">{title}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{body}</p>
+        <p className="text-[11px] font-bold text-[#FAF7F0]">{title}</p>
+        <p className="mt-0.5 text-[10.5px] text-[#A09D95] leading-relaxed font-sans">{body}</p>
       </div>
     </div>
   );
 }
 
-function FormatCard({ icon, label, detail }: { icon: React.ReactNode; label: string; detail: string }) {
+function FormatCard({
+  icon,
+  label,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  detail: string;
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-      <div className="flex items-center gap-2">
+    <div className="border border-[#3A3D45] bg-[#1C1E22] p-2.5">
+      <div className="flex items-center gap-1.5">
         {icon}
-        <span className="text-xs font-bold text-slate-800">{label}</span>
+        <span className="text-[11px] font-bold text-[#FAF7F0]">{label}</span>
       </div>
-      <p className="mt-0.5 text-[11px] text-slate-500">{detail}</p>
+      <p className="mt-0.5 text-[10px] text-[#A09D95]">{detail}</p>
     </div>
   );
 }
-
-
