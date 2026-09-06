@@ -7,6 +7,7 @@ import { MicroservicesTelemetry } from "@/components/MicroservicesTelemetry";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { getPreviewDocument } from "@/lib/scanStore";
+import { useI18n } from "@/contexts/I18nContext";
 import {
   formatDateTime,
   formatDocumentType,
@@ -38,6 +39,7 @@ import { toast } from "sonner";
 export default function Report() {
   const [, params] = useRoute("/report/:id");
   const { user } = useAuth();
+  const { t } = useI18n();
   const userIdentifier = user?.email || user?.openId || "guest";
   const numericId = Number(params?.id);
   const canLoadServer = Number.isInteger(numericId) && numericId > 0;
@@ -150,21 +152,21 @@ export default function Report() {
   }, [document.checks, categoryFilter, flagged, passed]);
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-5 py-4">
+    <div className="mx-auto max-w-[1440px] space-y-4 py-3 sm:py-4 px-2 sm:px-4">
       {/* Top Navigation & Operational Actions Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#3A3D45] pb-3 text-xs">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-b border-[#3A3D45] pb-3 text-xs">
         <Link
           href="/history"
           className="inline-flex items-center gap-1.5 font-mono text-[#D1CEC7] hover:text-[#8A6D1F] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>[ESC] RETURN_TO_AUDIT_LEDGER</span>
+          <span>[ESC] {t("audit_ledger")}</span>
         </Link>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
-            className="h-8 gap-1.5 border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:bg-[#3A3D45] hover:text-[#FAF7F0] font-mono text-[11px]"
+            className="h-8 flex-1 sm:flex-none gap-1.5 border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:bg-[#3A3D45] hover:text-[#FAF7F0] font-mono text-[11px]"
             onClick={() => setShowTelemetry(!showTelemetry)}
           >
             <Activity className="h-3.5 w-3.5 text-[#8A6D1F]" />
@@ -174,17 +176,17 @@ export default function Report() {
           <Button
             variant="outline"
             size="sm"
-            className="h-8 gap-1.5 border-[#8A6D1F] bg-[#8A6D1F]/15 text-[#FAF7F0] hover:bg-[#8A6D1F]/30 font-mono text-[11px]"
+            className="h-8 flex-1 sm:flex-none gap-1.5 border-[#8A6D1F] bg-[#8A6D1F]/15 text-[#FAF7F0] hover:bg-[#8A6D1F]/30 font-mono text-[11px]"
             onClick={() => setShowPdfModal(true)}
           >
             <Download className="h-3.5 w-3.5 text-[#8A6D1F]" />
-            [EXPORT_CERTIFICATE_PDF]
+            {t("export_pdf")}
           </Button>
 
-          <Link href="/verify">
+          <Link href="/verify" className="w-full sm:w-auto">
             <Button
               size="sm"
-              className="h-8 gap-1.5 border border-[#3A3D45] bg-[#1C1E22] text-[#D1CEC7] hover:bg-[#26282D] hover:text-[#FAF7F0] font-mono text-[11px]"
+              className="h-8 w-full sm:w-auto gap-1.5 border border-[#3A3D45] bg-[#1C1E22] text-[#D1CEC7] hover:bg-[#26282D] hover:text-[#FAF7F0] font-mono text-[11px]"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               [NEW_SCAN]
@@ -204,24 +206,24 @@ export default function Report() {
       )}
 
       {/* Editorial Dossier Master Header (Verdict & Score at Top-Left) */}
-      <div className="terminal-panel p-6 sm:p-7">
-        <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
+      <div className="terminal-panel p-4 sm:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 sm:gap-6 items-start">
           {/* Top-Left: Large Serif Verdict + Score */}
           <div>
             <div className="flex items-center gap-2 font-mono text-[10.5px]">
               <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40">
-                AUDIT_DOSSIER // CONFIDENCE_RATING
+                {t("confidence_score")}
               </span>
-              <span className="text-[#A09D95]">
+              <span className="text-[#A09D95] truncate">
                 REF: <strong className="text-[#FAF7F0]">{document.reference}</strong>
               </span>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-baseline gap-4 sm:gap-6">
+            <div className="mt-2.5 flex flex-wrap items-baseline gap-3 sm:gap-6">
               {/* Huge Confidence Score */}
-              <div className="flex items-baseline gap-2">
+              <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`font-serif text-5xl sm:text-6xl font-bold tracking-tight ${
+                  className={`font-serif text-4xl sm:text-6xl font-bold tracking-tight ${
                     meta.tone === "verified"
                       ? "text-[#22C55E]"
                       : meta.tone === "forged"
@@ -231,26 +233,21 @@ export default function Report() {
                 >
                   {document.score}
                 </span>
-                <span className="font-mono text-sm sm:text-base text-[#A09D95]">
+                <span className="font-mono text-xs sm:text-base text-[#A09D95]">
                   / 100
                 </span>
               </div>
 
               {/* Large Serif Verdict */}
-              <div className="border-l border-[#3A3D45] pl-4 sm:pl-6">
-                <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#FAF7F0]">
+              <div className="border-l border-[#3A3D45] pl-3 sm:pl-5">
+                <h1 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#FAF7F0]">
                   {meta.label.toUpperCase()}
                 </h1>
-                <p className="font-mono text-xs text-[#A09D95] mt-0.5 uppercase tracking-wider">
+                <p className="font-mono text-[10.5px] text-[#A09D95] mt-0.5 uppercase tracking-wider">
                   STATUTORY_STATUS: {document.status}
                 </p>
               </div>
             </div>
-
-            <p className="mt-3 text-xs leading-relaxed text-[#D1CEC7] max-w-2xl">
-              {meta.description}. Synthesized via multi-tiered deterministic verification,
-              JPEG error level analysis, OCR character spacing alignment, and clone localization.
-            </p>
           </div>
 
           {/* Top-Right: Telemetry Metadata Matrix */}
@@ -426,11 +423,11 @@ export default function Report() {
             <table className="dossier-table w-full text-left font-mono text-xs">
               <thead>
                 <tr>
-                  <th className="py-2.5 px-3">CHECK / CODE</th>
+                  <th className="py-2.5 px-3">{t("col_file")}</th>
                   <th className="py-2.5 px-3">LAYER</th>
-                  <th className="py-2.5 px-3">STATUS</th>
-                  <th className="py-2.5 px-3 text-right">SCORE</th>
-                  <th className="py-2.5 px-3">OBSERVATION</th>
+                  <th className="py-2.5 px-3">{t("col_status")}</th>
+                  <th className="py-2.5 px-3 text-right">{t("col_score")}</th>
+                  <th className="py-2.5 px-3">{t("col_observation")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -557,10 +554,15 @@ export default function Report() {
           )}
 
           {/* Action Decision Block: Human Review vs Archive */}
-          <div className="terminal-panel p-5 space-y-3">
-            <div className="flex items-center gap-2 font-mono text-[10.5px] text-[#A09D95] uppercase">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#8A6D1F]" />
-              INSTITUTIONAL_COMPLIANCE_DISPOSITION
+          <div className="terminal-panel p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-mono text-[10.5px] text-[#A09D95] uppercase">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#8A6D1F]" />
+                DISPOSITION
+              </div>
+              <span className="font-mono text-[10.5px] text-[#8A6D1F]">
+                {flagged.length ? "ACTION_REQUIRED" : "ARCHIVE_READY"}
+              </span>
             </div>
 
             <h3 className="font-serif text-base font-bold text-[#FAF7F0]">
@@ -569,30 +571,24 @@ export default function Report() {
                 : "Disposition: Retain in Institutional Compliance Ledger"}
             </h3>
 
-            <p className="text-xs text-[#A09D95] leading-relaxed">
-              {flagged.length
-                ? "Multi-layered signal anomalies indicate potential digital splicing or typography alteration. Institutional protocol mandates escalation to a senior forensic examiner."
-                : "Deterministic checksums and heuristic noise matrices show high document consistency. Digital certificate ready for permanent archival."}
-            </p>
-
-            <div className="pt-2">
+            <div className="pt-1">
               {flagged.length ? (
                 <Button
                   onClick={handleReview}
                   disabled={hasReview || reviewMutation.isPending}
-                  className="border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/80 font-mono text-xs h-9 px-4 font-bold"
+                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/80 font-mono text-xs px-5 font-bold"
                 >
                   {hasReview
                     ? "[REVIEW_QUEUED]"
                     : reviewMutation.isPending
                     ? "[TRANSMITTING...]"
-                    : "[REQUEST_HUMAN_EXAMINER_REVIEW]"}
+                    : t("req_human_review")}
                   <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Button>
               ) : (
                 <Button
                   variant="outline"
-                  className="border border-[#3A3D45] bg-[#1C1E22] text-[#FAF7F0] hover:bg-[#26282D] font-mono text-xs h-9 px-4"
+                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] border border-[#3A3D45] bg-[#1C1E22] text-[#FAF7F0] hover:bg-[#26282D] font-mono text-xs px-4"
                   onClick={() =>
                     toast.info("Reference Hash Copied", {
                       description: document.reference,
@@ -600,7 +596,7 @@ export default function Report() {
                   }
                 >
                   <LockKeyhole className="mr-2 h-3.5 w-3.5 text-[#8A6D1F]" />
-                  [COPY_IMMUTABLE_HASH]
+                  {t("copy_hash")}
                 </Button>
               )}
             </div>

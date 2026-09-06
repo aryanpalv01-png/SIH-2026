@@ -137,23 +137,23 @@ export default function Scan() {
   const progressPercent = Math.min(100, Math.round((activeStage / PIPELINE_STEPS.length) * 100));
 
   return (
-    <div className="mx-auto max-w-[1280px] space-y-5 py-4">
+    <div className="mx-auto max-w-[1280px] space-y-4 py-3 sm:py-4 px-2 sm:px-4">
       {/* Breadcrumb & Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3A3D45] pb-3 text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#3A3D45] pb-3 text-xs font-mono">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 font-mono text-[#D1CEC7] hover:text-[#8A6D1F] transition-colors"
+          className="inline-flex items-center gap-1.5 text-[#D1CEC7] hover:text-[#8A6D1F] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>[ESC] ABORT_EXECUTION</span>
         </Link>
-        <div className="flex items-center gap-3 font-mono text-[11px] text-[#A09D95]">
-          <span>PIPELINE_ID: <span className="text-[#FAF7F0] font-semibold">{document.id}</span></span>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] text-[#A09D95]">
+          <span>REF: <span className="text-[#FAF7F0] font-semibold">{document.reference}</span></span>
           <span className="text-[#3A3D45]">|</span>
-          <span>ELAPSED: <span className="text-[#8A6D1F] font-bold">{formatElapsed(elapsedMs)}</span></span>
+          <span>T+: <span className="text-[#8A6D1F] font-bold">{formatElapsed(elapsedMs)}</span></span>
           <span className="text-[#3A3D45]">|</span>
           <span className="command-badge bg-[#26282D] text-[#22C55E] border-[#3A3D45]">
-            ENGINE_STATE: {activeStage >= PIPELINE_STEPS.length ? "FINALIZING" : "STREAMING"}
+            {activeStage >= PIPELINE_STEPS.length ? "FINALIZING" : "STREAMING"}
           </span>
         </div>
       </div>
@@ -161,31 +161,31 @@ export default function Scan() {
       {/* Primary Terminal Command Deck */}
       <div className="terminal-panel rounded-none">
         {/* Terminal Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#3A3D45] px-5 py-3.5 bg-[#1C1E22]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#3A3D45] px-4 py-3 sm:px-5 sm:py-3.5 bg-[#1C1E22]">
           <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center border border-[#3A3D45] bg-[#26282D] text-[#8A6D1F]">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-[#3A3D45] bg-[#26282D] text-[#8A6D1F]">
               <Terminal className="h-4 w-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-serif text-lg font-bold tracking-tight text-[#FAF7F0]">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="font-serif text-base sm:text-lg font-bold tracking-tight text-[#FAF7F0]">
                   Forensic Pipeline Execution Console
                 </h1>
-                <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40">
+                <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 text-[10px]">
                   8 PHASES
                 </span>
               </div>
-              <p className="font-mono text-[10.5px] text-[#A09D95] mt-0.5">
-                TARGET: {document.filename} · SIZE: {document.fileSize} · TYPE: {document.mimeType}
+              <p className="font-mono text-[10.5px] text-[#A09D95] mt-0.5 truncate">
+                TARGET: {document.filename} · SIZE: {document.fileSize}
               </p>
             </div>
           </div>
 
-          <div className="text-right">
-            <div className="font-mono text-xs text-[#A09D95]">
+          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 border-t sm:border-t-0 border-[#3A3D45]/40 pt-2 sm:pt-0 font-mono">
+            <div className="text-xs text-[#A09D95]">
               PROGRESS: <span className="text-[#FAF7F0] font-bold">{activeStage} / {PIPELINE_STEPS.length}</span>
             </div>
-            <div className="font-mono text-[11px] text-[#8A6D1F] font-semibold">
+            <div className="text-[11px] text-[#8A6D1F] font-semibold">
               {progressPercent}% COMPLETE
             </div>
           </div>

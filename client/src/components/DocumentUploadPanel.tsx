@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/contexts/I18nContext";
 
 const acceptedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 const maxFileSize = 10 * 1024 * 1024;
@@ -24,6 +25,7 @@ export function DocumentUploadPanel({
   compact?: boolean;
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -215,7 +217,7 @@ export function DocumentUploadPanel({
             <div className="flex items-center gap-2">
               <span className="command-badge command-badge-verified">STAGED</span>
               <span className="font-mono text-xs font-semibold text-slate-300">
-                Payload Ready for Ingestion
+                {t("staged_payload")}
               </span>
             </div>
             <Button
@@ -223,13 +225,13 @@ export function DocumentUploadPanel({
               variant="ghost"
               size="sm"
               onClick={handleCancelStaged}
-              className="text-red-400 hover:bg-red-950/40 hover:text-red-300 text-xs font-mono h-7 px-2"
+              className="text-red-400 hover:bg-red-950/40 hover:text-red-300 text-xs font-mono h-8 px-2.5"
             >
-              <X className="mr-1 h-3.5 w-3.5" /> DISCARD
+              <X className="mr-1 h-3.5 w-3.5" /> {t("discard")}
             </Button>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-[110px_1fr] items-center">
+          <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-[110px_1fr] items-center">
             {stagedPreviewUrl ? (
               <div className="aspect-[1.2/1] w-full max-w-[140px] sm:max-w-none mx-auto sm:mx-0 overflow-hidden border border-[#3A3D45] bg-[#181A1D] flex items-center justify-center">
                 <img
@@ -244,7 +246,7 @@ export function DocumentUploadPanel({
               </div>
             )}
 
-            <div className="space-y-1.5 text-center sm:text-left">
+            <div className="space-y-2 text-center sm:text-left">
               <p className="font-mono text-xs font-bold text-white truncate max-w-[320px] mx-auto sm:mx-0">
                 {stagedFile.name}
               </p>
@@ -252,24 +254,24 @@ export function DocumentUploadPanel({
                 PAYLOAD: {(stagedFile.size / (1024 * 1024)).toFixed(2)} MB · MIME: {stagedFile.type || "binary"}
               </p>
 
-              <div className="pt-2 flex flex-col sm:flex-row flex-wrap gap-2">
+              <div className="pt-2 flex flex-col sm:flex-row flex-wrap gap-2.5 w-full">
                 <Button
                   type="button"
                   disabled={disabled}
                   onClick={handleConfirmUpload}
-                  className="w-full sm:w-auto bg-[#8A6D1F] hover:bg-[#A28126] text-white font-mono font-bold text-xs h-8 px-4 rounded-xs"
+                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[36px] bg-[#8A6D1F] hover:bg-[#A28126] text-white font-mono font-bold text-xs px-5 rounded-xs"
                 >
-                  <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
-                  {disabled ? "EXECUTING PIPELINE…" : "RUN FORENSIC SCREENING"}
+                  <ScanSearch className="mr-1.5 h-4 w-4" />
+                  {disabled ? "EXECUTING…" : t("execute_screening")}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancelStaged}
                   disabled={disabled}
-                  className="w-full sm:w-auto border-[#3A3D45] bg-[#181A1D] text-slate-400 hover:text-white font-mono text-xs h-8 px-3 rounded-xs"
+                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[36px] border-[#3A3D45] bg-[#181A1D] text-slate-400 hover:text-white font-mono text-xs px-4 rounded-xs"
                 >
-                  <Trash2 className="mr-1 h-3 w-3" /> CANCEL
+                  <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("discard")}
                 </Button>
               </div>
             </div>
@@ -305,55 +307,55 @@ export function DocumentUploadPanel({
             <FileUp className="h-5 w-5" strokeWidth={1.75} />
           </div>
 
-          <div className="max-w-md text-center mt-3">
+          <div className="max-w-md text-center mt-3 px-2">
             <h3 className="font-serif text-lg sm:text-xl font-bold text-white tracking-tight">
-              Ingest Document for Forensic Screening
+              {t("dropzone_title")}
             </h3>
             <p className="mt-1 font-mono text-xs text-slate-400 leading-relaxed">
-              Drag file here or select from local storage / optical camera
+              {t("dropzone_subtitle")}
             </p>
           </div>
 
-          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 w-full max-w-xs sm:max-w-none mx-auto">
+          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 w-full max-w-sm sm:max-w-none mx-auto px-2">
             <Button
               type="button"
               disabled={disabled}
-              className="w-full sm:w-auto bg-[#8A6D1F] hover:bg-[#A28126] text-white font-mono font-bold text-xs h-8.5 px-4 rounded-xs"
+              className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] bg-[#8A6D1F] hover:bg-[#A28126] text-white font-mono font-bold text-xs px-5 rounded-xs"
               onClick={() => inputRef.current?.click()}
             >
-              <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
-              {disabled ? "INGESTING…" : "SELECT FILE"}
+              <ScanSearch className="mr-1.5 h-4 w-4" />
+              {disabled ? "INGESTING…" : t("select_file")}
             </Button>
             <Button
               type="button"
               variant="outline"
               disabled={disabled}
-              className="w-full sm:w-auto border-[#3A3D45] bg-[#181A1D] text-slate-300 hover:border-[#8A6D1F] hover:text-[#8A6D1F] font-mono text-xs h-8.5 px-3.5 rounded-xs transition-colors"
+              className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] border-[#3A3D45] bg-[#181A1D] text-slate-300 hover:border-[#8A6D1F] hover:text-[#8A6D1F] font-mono text-xs px-4 rounded-xs transition-colors"
               onClick={startCamera}
             >
-              <Camera className="mr-1.5 h-3.5 w-3.5 text-[#8A6D1F]" />
-              OPTICAL CAMERA
+              <Camera className="mr-1.5 h-4 w-4 text-[#8A6D1F]" />
+              {t("optical_camera")}
             </Button>
           </div>
 
           <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-slate-500">
-            PDF · JPG · PNG · WEBP · MAX 10 MB
+            {t("upload_limits")}
           </p>
 
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[11px] text-slate-400">
+          <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-slate-400">
             <span className="inline-flex items-center gap-1">
-              <LockKeyhole className="h-3 w-3 text-[#8A6D1F]" /> CLIENT ENCLAVE
+              <LockKeyhole className="h-3 w-3 text-[#8A6D1F]" /> {t("client_enclave")}
             </span>
             <span className="text-[#3A3D45]">|</span>
             <span className="inline-flex items-center gap-1">
-              <FileCheck2 className="h-3 w-3 text-[#22C55E]" /> ZERO DISK RETENTION
+              <FileCheck2 className="h-3 w-3 text-[#22C55E]" /> {t("zero_disk")}
             </span>
           </div>
 
           {/* Forensic Benchmark Specimen Chips */}
           <div className="mt-4 border-t border-[#3A3D45] pt-3 w-full text-center">
             <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500 mb-2">
-              LOAD COMPLIANCE BENCHMARK SPECIMEN:
+              {t("load_specimen")}:
             </p>
             <div className="flex flex-wrap justify-center gap-1.5">
               {[
@@ -365,7 +367,7 @@ export function DocumentUploadPanel({
                 <a
                   key={sample.id}
                   href={`/report/${sample.id}`}
-                  className={`font-mono text-[10px] px-2 py-0.5 border rounded-xs transition-all ${
+                  className={`font-mono text-[10px] px-2 py-1 min-h-[30px] flex items-center border rounded-xs transition-all ${
                     sample.tone === "verified"
                       ? "border-[#22C55E]/40 bg-[#22C55E]/10 text-emerald-400 hover:bg-[#22C55E]/20"
                       : "border-red-900/50 bg-red-950/30 text-red-400 hover:bg-red-900/40"

@@ -330,7 +330,7 @@ function DashboardLayoutContent({
               </span>
             </div>
           )}
-          <main className="p-4 sm:p-6 lg:p-7">
+          <main className="p-3 sm:p-6 lg:p-7">
             <div className="mx-auto max-w-[1440px]">{children}</div>
           </main>
         </SidebarInset>
