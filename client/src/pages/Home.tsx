@@ -144,8 +144,8 @@ export default function Home() {
         </section>
 
         {/* How It Works */}
-        <section id="how-it-works" className="bg-slate-50 py-20 text-slate-900 sm:py-24">
-          <div className="container max-w-6xl">
+        <section id="how-it-works" className="bg-slate-50 py-16 text-slate-900 sm:py-24">
+          <div className="container max-w-6xl px-4 sm:px-6">
             <div className="max-w-xl">
               <span className="gov-pill text-[10px]">
                 Indian Forensic Architecture
@@ -181,8 +181,8 @@ export default function Home() {
         </section>
 
         {/* Security Section */}
-        <section id="security" className="bg-white py-20 text-slate-900 sm:py-24 border-y border-slate-200">
-          <div className="container grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+        <section id="security" className="bg-white py-16 text-slate-900 sm:py-24 border-y border-slate-200">
+          <div className="container grid max-w-6xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start px-4 sm:px-6">
             <div>
               <span className="gov-pill text-[10px]">
                 Data Sovereignty & Security
@@ -198,30 +198,30 @@ export default function Home() {
               <TrustCard
                 icon={<LockKeyhole className="h-5 w-5 text-saffron-dark" />}
                 title="Account-Scoped Ledgers"
-                body="Document records belong strictly to the investigator who uploaded them. Cross-account data leaks are systematically blocked."
+                body="Screened documents are cryptographically isolated per officer account. Other analysts cannot view your session or audit history."
               />
               <TrustCard
-                icon={<Check className="h-5 w-5 text-india-green" />}
-                title="Inspectable Evidence"
-                body="Every flagged anomaly includes precise pixel coordinates, bounding boxes, and plain-language technical justifications."
+                icon={<ShieldCheck className="h-5 w-5 text-india-green" />}
+                title="Zero-Disk Lifecycle"
+                body="Raw uploaded files reside exclusively in ephemeral memory during analysis and are immediately flushed after forensic scoring."
               />
               <TrustCard
-                icon={<Building2 className="h-5 w-5 text-ashoka" />}
-                title="Official PDF Export"
-                body="Generates compliant certificates complete with SHA-256 integrity hashes, QR verification codes, and institutional seals."
+                icon={<Building2 className="h-5 w-5 text-sky-600" />}
+                title="On-Premises Ready"
+                body="Fully containerized for air-gapped sovereign deployment within State Data Centers (SDC) or NIC institutional clouds."
               />
               <TrustCard
-                icon={<Award className="h-5 w-5 text-saffron-dark" />}
-                title="Human-in-the-Loop"
-                body="Borderline signals can be routed to human forensic officers for secondary microscopic examination."
+                icon={<Award className="h-5 w-5 text-ashoka" />}
+                title="Verifiable SHA-256 Hashes"
+                body="Produces tamper-evident cryptographic checksums for every audit report, allowing instant verification by court authorities."
               />
             </div>
           </div>
         </section>
 
         {/* Use Cases */}
-        <section id="use-cases" className="bg-slate-50 py-20 text-slate-900 sm:py-24">
-          <div className="container max-w-6xl">
+        <section id="use-cases" className="bg-slate-50 py-16 text-slate-900 sm:py-24">
+          <div className="container max-w-6xl px-4 sm:px-6">
             <div className="flex flex-col justify-between gap-6 border-b border-slate-200 pb-8 sm:flex-row sm:items-end">
               <div>
                 <span className="gov-pill text-[10px]">

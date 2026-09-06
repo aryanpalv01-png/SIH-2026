@@ -7,6 +7,7 @@ import { runForensicAnalysis } from "./forensics";
 import { createChecks, createDocument, finalizeDocument, getUserDocumentReport, listUserDocuments, requestDocumentReview, updateDocumentEvidence } from "./db";
 import { storagePut, storageDelete } from "./storage";
 import { authService } from "./authService";
+import { sendVerificationOtpEmail } from "./services/email";
 
 const documentType = z.enum(["aadhaar", "pan", "passport", "marksheet", "bank_statement", "other"]);
 const allowedMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
@@ -67,40 +68,39 @@ export const appRouter = router({
     sendOtp: publicProcedure
       .input(
         z.object({
-          email: z.string().optional(),
-          phone: z.string().optional(),
-        }).refine((data) => Boolean(data.email || data.phone), {
-          message: "Either email or phone number is required",
+          email: z.string().email("Valid email address is required"),
+          redirectUrl: z.string().url().optional(),
         })
       )
       .mutation(async ({ input }) => {
-        const identifier = (input.phone || input.email)!.trim();
-        const code = authService.generateOtp(identifier);
+        const email = input.email.trim().toLowerCase();
+        const code = authService.generateOtp(email);
+        const emailResult = await sendVerificationOtpEmail({
+          email,
+          otpCode: code,
+          redirectUrl: input.redirectUrl,
+        });
         return {
           success: true,
-          message: "One-time passcode dispatched via SMS successfully",
+          message: emailResult.message || `Verification passcode dispatched to ${email}`,
           devCode: code,
+          bypassed: emailResult.bypassed,
         };
       }),
     verifyOtp: publicProcedure
       .input(
         z.object({
-          email: z.string().optional(),
-          phone: z.string().optional(),
+          email: z.string().email("Valid email address is required"),
           token: z.string().min(4, "Verification token is required"),
-        }).refine((data) => Boolean(data.email || data.phone), {
-          message: "Either email or phone number is required",
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const identifier = (input.phone || input.email)!.trim();
-        const valid = authService.verifyOtpCode(identifier, input.token);
+        const email = input.email.trim().toLowerCase();
+        const valid = authService.verifyOtpCode(email, input.token);
         if (!valid) {
-          throw new Error("Invalid or expired SMS passcode. Please check and retry.");
+          throw new Error("Invalid or expired verification passcode. Please check and retry.");
         }
-        const { user, token } = input.phone
-          ? await authService.loginOrCreateWithPhone(input.phone)
-          : await authService.loginOrCreateWithEmail(input.email!);
+        const { user, token } = await authService.loginOrCreateWithEmail(email);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, {
           ...cookieOptions,

@@ -8,6 +8,107 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// server/services/fusion.ts
+function fuseForensicChecks(checks2) {
+  const active = checks2.filter((item) => item.result !== "not_applicable");
+  if (!active.length) {
+    return {
+      score: 50,
+      status: "needs_review",
+      tierAHardOverride: false,
+      tierBCumulativePenalty: false,
+      tierAFailures: [],
+      tierBFailures: [],
+      rawScore: 50,
+      penaltiesApplied: 0
+    };
+  }
+  const tierAFailures = [];
+  for (const c of active) {
+    if (c.result !== "flag") continue;
+    if (c.checkName === "checksum_identifier_validation") {
+      tierAFailures.push(`${c.checkName}: ${c.explanation}`);
+    }
+    if (c.checkName === "qr_signature_verification") {
+      tierAFailures.push(`${c.checkName}: ${c.explanation}`);
+    }
+    if (c.checkName === "copy_move_clone_detection" && (Boolean(c.flaggedRegion) || c.confidence <= 40)) {
+      tierAFailures.push(`${c.checkName}: ${c.explanation}`);
+    }
+    if ((c.checkName === "trufor_inference" || c.checkName === "catnet_inference") && c.confidence < 40) {
+      tierAFailures.push(`${c.checkName}: ${c.explanation}`);
+    }
+  }
+  const isTierAFailed = tierAFailures.length > 0;
+  const tierBFailures = active.filter((c) => TIER_B_CHECKS.has(c.checkName) && c.result === "flag").map((c) => `${c.checkName}: ${c.explanation}`);
+  const isTierBFailCumulative = tierBFailures.length >= 2;
+  let totalWeight = 0;
+  let weightedSum = 0;
+  for (const item of active) {
+    const weight = MODULE_WEIGHTS[item.checkName] ?? (TIER_A_CHECKS.has(item.checkName) ? 2.5 : 1);
+    totalWeight += weight;
+    weightedSum += item.confidence * weight;
+  }
+  const rawScore = Math.round(weightedSum / Math.max(0.1, totalWeight));
+  let score = rawScore;
+  let penaltiesApplied = 0;
+  if (isTierBFailCumulative) {
+    if (tierBFailures.length === 2) {
+      const penalty = 20;
+      penaltiesApplied = penalty;
+      score = Math.min(55, Math.max(0, score - penalty));
+    } else if (tierBFailures.length >= 3) {
+      const penalty = 40;
+      penaltiesApplied = penalty;
+      score = Math.min(34, Math.max(0, score - penalty));
+    }
+  }
+  if (isTierAFailed) {
+    score = Math.min(34, score);
+  }
+  const status = score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged";
+  return {
+    score,
+    status,
+    tierAHardOverride: isTierAFailed,
+    tierBCumulativePenalty: isTierBFailCumulative,
+    tierAFailures,
+    tierBFailures,
+    rawScore,
+    penaltiesApplied
+  };
+}
+var MODULE_WEIGHTS, TIER_A_CHECKS, TIER_B_CHECKS;
+var init_fusion = __esm({
+  "server/services/fusion.ts"() {
+    "use strict";
+    MODULE_WEIGHTS = {
+      checksum_identifier_validation: 3.5,
+      qr_signature_verification: 3.2,
+      trufor_inference: 2.5,
+      catnet_inference: 2.5,
+      copy_move_clone_detection: 2,
+      ocr_typography_consistency: 1.8,
+      ela_compression_analysis: 1.5,
+      screenshot_capture_detection: 1.2,
+      ai_generated_image_detector: 1.2,
+      metadata_exif_inspection: 1
+    };
+    TIER_A_CHECKS = /* @__PURE__ */ new Set([
+      "checksum_identifier_validation",
+      "qr_signature_verification",
+      "copy_move_clone_detection",
+      "trufor_inference",
+      "catnet_inference"
+    ]);
+    TIER_B_CHECKS = /* @__PURE__ */ new Set([
+      "ocr_typography_consistency",
+      "ela_compression_analysis",
+      "screenshot_capture_detection"
+    ]);
+  }
+});
+
 // server/forensics.ts
 var forensics_exports = {};
 __export(forensics_exports, {
@@ -254,29 +355,6 @@ async function callExternalAdapter(name, input) {
     return check(`${name}_inference`, "not_applicable", 0, `${name} inference was unavailable; this provider signal was excluded from scoring.`, name);
   }
 }
-function fuseForensicChecks(checks2) {
-  const active = checks2.filter((item) => item.result !== "not_applicable");
-  if (!active.length) return { score: 0, status: "needs_review" };
-  const isDeterministicFail = checks2.some(
-    (item) => ["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) && item.result === "flag"
-  );
-  const isHighConfidenceCloneTamperFail = checks2.some(
-    (item) => item.checkName === "copy_move_clone_detection" && item.result === "flag" && Boolean(item.flaggedRegion) || item.checkName === "trufor_inference" && item.result === "flag" && item.confidence < 40 || item.checkName === "catnet_inference" && item.result === "flag" && item.confidence < 40
-  );
-  const tierAHardOverride = isDeterministicFail || isHighConfidenceCloneTamperFail;
-  const totalWeight = active.reduce(
-    (sum, item) => sum + (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 3 : item.provider === "trufor" || item.provider === "catnet" ? 2.2 : 1),
-    0
-  );
-  const weighted = active.reduce(
-    (sum, item) => sum + item.confidence * (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 3 : item.provider === "trufor" || item.provider === "catnet" ? 2.2 : 1),
-    0
-  ) / totalWeight;
-  const rawScore = Math.round(weighted);
-  const score = tierAHardOverride ? Math.min(34, rawScore) : rawScore;
-  const status = score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged";
-  return { score, status };
-}
 async function probeWorkerHealth() {
   const url = process.env.FORENSIC_WORKER_URL ? `${process.env.FORENSIC_WORKER_URL.replace(/\/$/, "")}/health` : void 0;
   if (!url) return void 0;
@@ -393,6 +471,7 @@ var editingSoftware, allowedMimeTypes, verhoeffMultiplication, verhoeffPermutati
 var init_forensics = __esm({
   "server/forensics.ts"() {
     "use strict";
+    init_fusion();
     editingSoftware = /(photoshop|gimp|canva|illustrator|affinity|pixelmator|after effects)/i;
     allowedMimeTypes = /* @__PURE__ */ new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
     verhoeffMultiplication = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 3, 4, 0, 6, 7, 8, 9, 5], [2, 3, 4, 0, 1, 7, 8, 9, 5, 6], [3, 4, 0, 1, 2, 8, 9, 5, 6, 7], [4, 0, 1, 2, 3, 9, 5, 6, 7, 8], [5, 9, 8, 7, 6, 0, 4, 3, 2, 1], [6, 5, 9, 8, 7, 1, 0, 4, 3, 2], [7, 6, 5, 9, 8, 2, 1, 0, 4, 3], [8, 7, 6, 5, 9, 3, 2, 1, 0, 4], [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]];
@@ -1441,49 +1520,6 @@ var authService = {
     });
     return { user: this.sanitizeUser(stored), token };
   },
-  async loginOrCreateWithPhone(phone, name) {
-    const phoneNorm = phone.trim().replace(/\s+/g, "");
-    const emailDerived = `${phoneNorm.replace("+", "")}@sms.gov.in`;
-    let stored = localUserStore.get(emailDerived) || localUserStore.get(phoneNorm);
-    if (!stored) {
-      const openId = `usr_phone_${crypto2.randomBytes(8).toString("hex")}`;
-      const salt = generateSalt();
-      stored = {
-        id: localUserStore.size + 1,
-        openId,
-        name: name || `Officer (${phoneNorm})`,
-        email: emailDerived,
-        passwordHash: hashPassword(crypto2.randomBytes(16).toString("hex"), salt),
-        salt,
-        role: "user",
-        loginMethod: "supabase_sms",
-        createdAt: /* @__PURE__ */ new Date(),
-        updatedAt: /* @__PURE__ */ new Date(),
-        lastSignedIn: /* @__PURE__ */ new Date()
-      };
-      localUserStore.set(emailDerived, stored);
-      localUserStore.set(phoneNorm, stored);
-      openIdMap.set(openId, stored);
-      try {
-        await upsertUser({
-          openId,
-          name: stored.name,
-          email: emailDerived,
-          loginMethod: "supabase_sms",
-          role: "user",
-          lastSignedIn: /* @__PURE__ */ new Date()
-        });
-      } catch (err) {
-        console.warn("[Database] Supabase Phone user store fallback:", err);
-      }
-    } else {
-      stored.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    const token = await sdk.createSessionToken(stored.openId, {
-      name: stored.name
-    });
-    return { user: this.sanitizeUser(stored), token };
-  },
   generateOtp(identifier) {
     const norm = identifier.trim().toLowerCase().replace(/\s+/g, "");
     const code = Math.floor(1e5 + Math.random() * 9e5).toString();
@@ -1542,6 +1578,157 @@ var authService = {
   }
 };
 
+// server/services/email.ts
+import { Resend } from "resend";
+var PRODUCTION_PORTAL_URL = "https://bharatdrishti.onrender.com/dashboard";
+function getPortalRedirectUrl() {
+  const envUrl = process.env.APP_URL || process.env.VITE_AUTH_REDIRECT_URL;
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    return `${envUrl.replace(/\/+$/, "")}/dashboard`;
+  }
+  return PRODUCTION_PORTAL_URL;
+}
+async function sendVerificationOtpEmail(params) {
+  const emailNorm = params.email.trim().toLowerCase();
+  const otpCode = params.otpCode.trim();
+  const redirectUrl = params.redirectUrl || getPortalRedirectUrl();
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    console.log(
+      `
+=================================================================
+[VERISCAN AUTH - RESEND BYPASS]
+Recipient:    ${emailNorm}
+One-Time OTP: ${otpCode}
+Redirect URL: ${redirectUrl}
+Note: Set RESEND_API_KEY to send live emails.
+=================================================================
+`
+    );
+    return {
+      success: true,
+      message: `Verification passcode dispatched to ${emailNorm} (test bypass active)`,
+      bypassed: true,
+      devCode: otpCode
+    };
+  }
+  try {
+    const resend = new Resend(resendApiKey);
+    const fromAddress = process.env.RESEND_FROM_EMAIL || "VeriScan Security <onboarding@resend.dev>";
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VeriScan Verification Passcode</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; background-color: #0b1120; color: #f1f5f9;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0b1120; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="540" cellpadding="0" cellspacing="0" style="max-width: 540px; background-color: #0f172a; border-radius: 12px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);">
+          <!-- Institutional Header -->
+          <tr>
+            <td style="padding: 24px 32px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-bottom: 2px solid #b45309;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #f59e0b;">
+                      Institutional Document Forensic Architecture
+                    </div>
+                    <div style="font-size: 22px; font-weight: 800; color: #ffffff; margin-top: 4px;">
+                      VeriScan &bull; BharatDrishti
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Body -->
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 16px; font-size: 20px; font-weight: 700; color: #f8fafc;">
+                Security Verification Code
+              </h1>
+              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #94a3b8;">
+                You have requested a secure sign-in verification code for your VeriScan institutional forensic screening account.
+              </p>
+
+              <!-- OTP Display Box -->
+              <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 8px;">
+                  Your 6-Digit One-Time Passcode
+                </div>
+                <div style="font-size: 36px; font-weight: 800; letter-spacing: 0.25em; color: #38bdf8; font-family: monospace;">
+                  ${otpCode}
+                </div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 8px;">
+                  Valid for 10 minutes &bull; Single-use authorization
+                </div>
+              </div>
+
+              <!-- Direct Portal Action -->
+              <div style="text-align: center; margin-bottom: 28px;">
+                <a href="${redirectUrl}" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 28px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3);">
+                  Open Production Portal
+                </a>
+                <p style="font-size: 11px; color: #64748b; margin-top: 8px;">
+                  Destination: ${redirectUrl}
+                </p>
+              </div>
+
+              <div style="border-top: 1px solid #1e293b; padding-top: 20px; font-size: 12px; color: #64748b; line-height: 1.5;">
+                <strong style="color: #94a3b8;">Security Notice:</strong> If you did not initiate this authentication request, please ignore this email or notify your system administrator immediately. VeriScan officers will never ask for your one-time passcode.
+              </div>
+            </td>
+          </tr>
+
+          <!-- Institutional Footer -->
+          <tr>
+            <td style="padding: 16px 32px; background-color: #090d16; border-top: 1px solid #1e293b; font-size: 11px; color: #475569; text-align: center;">
+              VeriScan Institutional Screen &bull; National Forensic Document Verification Network
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+    const data = await resend.emails.send({
+      from: fromAddress,
+      to: [emailNorm],
+      subject: `VeriScan Security Code: ${otpCode}`,
+      html: htmlContent
+    });
+    if (data.error) {
+      console.error("[RESEND_SEND_ERROR]:", data.error);
+      return {
+        success: false,
+        message: data.error.message || "Failed to deliver email through Resend",
+        bypassed: false,
+        error: data.error.message
+      };
+    }
+    return {
+      success: true,
+      message: `Verification code sent to ${emailNorm}`,
+      bypassed: false
+    };
+  } catch (err) {
+    console.error("[RESEND_EXCEPTION]:", err);
+    return {
+      success: true,
+      message: `Passcode generated for ${emailNorm} (Resend fallback active)`,
+      bypassed: true,
+      devCode: otpCode
+    };
+  }
+}
+
 // server/routers.ts
 var documentType = z2.enum(["aadhaar", "pan", "passport", "marksheet", "bank_statement", "other"]);
 var allowedMimeTypes2 = /* @__PURE__ */ new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
@@ -1597,35 +1784,36 @@ var appRouter = router({
     }),
     sendOtp: publicProcedure.input(
       z2.object({
-        email: z2.string().optional(),
-        phone: z2.string().optional()
-      }).refine((data) => Boolean(data.email || data.phone), {
-        message: "Either email or phone number is required"
+        email: z2.string().email("Valid email address is required"),
+        redirectUrl: z2.string().url().optional()
       })
     ).mutation(async ({ input }) => {
-      const identifier = (input.phone || input.email).trim();
-      const code = authService.generateOtp(identifier);
+      const email = input.email.trim().toLowerCase();
+      const code = authService.generateOtp(email);
+      const emailResult = await sendVerificationOtpEmail({
+        email,
+        otpCode: code,
+        redirectUrl: input.redirectUrl
+      });
       return {
         success: true,
-        message: "One-time passcode dispatched via SMS successfully",
-        devCode: code
+        message: emailResult.message || `Verification passcode dispatched to ${email}`,
+        devCode: code,
+        bypassed: emailResult.bypassed
       };
     }),
     verifyOtp: publicProcedure.input(
       z2.object({
-        email: z2.string().optional(),
-        phone: z2.string().optional(),
+        email: z2.string().email("Valid email address is required"),
         token: z2.string().min(4, "Verification token is required")
-      }).refine((data) => Boolean(data.email || data.phone), {
-        message: "Either email or phone number is required"
       })
     ).mutation(async ({ ctx, input }) => {
-      const identifier = (input.phone || input.email).trim();
-      const valid = authService.verifyOtpCode(identifier, input.token);
+      const email = input.email.trim().toLowerCase();
+      const valid = authService.verifyOtpCode(email, input.token);
       if (!valid) {
-        throw new Error("Invalid or expired SMS passcode. Please check and retry.");
+        throw new Error("Invalid or expired verification passcode. Please check and retry.");
       }
-      const { user, token } = input.phone ? await authService.loginOrCreateWithPhone(input.phone) : await authService.loginOrCreateWithEmail(input.email);
+      const { user, token } = await authService.loginOrCreateWithEmail(email);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, token, {
         ...cookieOptions,

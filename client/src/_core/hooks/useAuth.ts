@@ -125,7 +125,7 @@ export function useAuth(options?: UseAuthOptions) {
   });
 
   const sendOtp = useCallback(
-    async (params: { email?: string; phone?: string }) => {
+    async (params: { email: string; redirectUrl?: string }) => {
       return await sendOtpMutation.mutateAsync(params);
     },
     [sendOtpMutation]
@@ -140,7 +140,7 @@ export function useAuth(options?: UseAuthOptions) {
   );
 
   const verifyOtp = useCallback(
-    async (params: { email?: string; phone?: string; token: string }) => {
+    async (params: { email: string; token: string }) => {
       const res = await verifyOtpMutation.mutateAsync(params);
       return res.user;
     },

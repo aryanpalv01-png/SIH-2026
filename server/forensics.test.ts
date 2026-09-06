@@ -45,6 +45,34 @@ describe("forensic module contracts", () => {
     ]);
     expect(result.score).toBeLessThan(35);
     expect(result.status).toBe("likely_forged");
+    expect(result.tierAHardOverride).toBe(true);
+  });
+
+  it("applies cumulative penalty pushing score <= 55 (Needs Review) when 2 Tier B checks fail", () => {
+    const result = fuseForensicChecks([
+      { checkName: "ocr_typography_consistency", result: "flag", confidence: 45, explanation: "Font style anomaly detected", provider: "ocr", available: true },
+      { checkName: "ela_compression_analysis", result: "flag", confidence: 40, explanation: "Compression artifacts differ", provider: "local", available: true },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 95, explanation: "Clean EXIF metadata", provider: "local", available: true },
+      { checkName: "ai_generated_image_detector", result: "pass", confidence: 95, explanation: "Clean generative signature", provider: "local", available: true },
+    ]);
+    expect(result.score).toBeLessThanOrEqual(55);
+    expect(result.score).toBeGreaterThanOrEqual(40);
+    expect(result.status).toBe("needs_review");
+    expect(result.tierBCumulativePenalty).toBe(true);
+    expect(result.tierBFailures.length).toBe(2);
+  });
+
+  it("applies cumulative penalty pushing score < 35 (Likely Forged) when 3 Tier B checks fail", () => {
+    const result = fuseForensicChecks([
+      { checkName: "ocr_typography_consistency", result: "flag", confidence: 35, explanation: "Font mismatch", provider: "ocr", available: true },
+      { checkName: "ela_compression_analysis", result: "flag", confidence: 30, explanation: "ELA anomaly", provider: "local", available: true },
+      { checkName: "screenshot_capture_detection", result: "flag", confidence: 25, explanation: "Moiré screen capture detected", provider: "local", available: true },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 95, explanation: "Clean EXIF", provider: "local", available: true },
+    ]);
+    expect(result.score).toBeLessThan(35);
+    expect(result.status).toBe("likely_forged");
+    expect(result.tierBCumulativePenalty).toBe(true);
+    expect(result.tierBFailures.length).toBe(3);
   });
 
   it("normalizes TruFor and CAT-Net self-hosted health states", async () => {

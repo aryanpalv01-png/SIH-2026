@@ -236,50 +236,6 @@ export const authService = {
     return { user: this.sanitizeUser(stored), token };
   },
 
-  async loginOrCreateWithPhone(phone: string, name?: string): Promise<{ user: User; token: string }> {
-    const phoneNorm = phone.trim().replace(/\s+/g, "");
-    const emailDerived = `${phoneNorm.replace("+", "")}@sms.gov.in`;
-    let stored = localUserStore.get(emailDerived) || localUserStore.get(phoneNorm);
-    if (!stored) {
-      const openId = `usr_phone_${crypto.randomBytes(8).toString("hex")}`;
-      const salt = generateSalt();
-      stored = {
-        id: localUserStore.size + 1,
-        openId,
-        name: name || `Officer (${phoneNorm})`,
-        email: emailDerived,
-        passwordHash: hashPassword(crypto.randomBytes(16).toString("hex"), salt),
-        salt,
-        role: "user",
-        loginMethod: "supabase_sms",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastSignedIn: new Date(),
-      };
-      localUserStore.set(emailDerived, stored);
-      localUserStore.set(phoneNorm, stored);
-      openIdMap.set(openId, stored);
-      try {
-        await upsertUser({
-          openId,
-          name: stored.name,
-          email: emailDerived,
-          loginMethod: "supabase_sms",
-          role: "user",
-          lastSignedIn: new Date(),
-        });
-      } catch (err) {
-        console.warn("[Database] Supabase Phone user store fallback:", err);
-      }
-    } else {
-      stored.lastSignedIn = new Date();
-    }
-    const token = await sdk.createSessionToken(stored.openId, {
-      name: stored.name,
-    });
-    return { user: this.sanitizeUser(stored), token };
-  },
-
   generateOtp(identifier: string): string {
     const norm = identifier.trim().toLowerCase().replace(/\s+/g, "");
     const code = Math.floor(100000 + Math.random() * 900000).toString();

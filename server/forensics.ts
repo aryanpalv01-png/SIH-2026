@@ -258,67 +258,8 @@ async function callExternalAdapter(name: "trufor" | "catnet", input: ForensicInp
   } catch { return check(`${name}_inference`, "not_applicable", 0, `${name} inference was unavailable; this provider signal was excluded from scoring.`, name); }
 }
 
-/**
- * Score Fusion Engine with Tier A Hard Overrides:
- * If any deterministic check (checksum/QR signature) or high-confidence clone/tamper
- * localization module fails, forcibly cap the overall confidence score below 35 (Likely Forged).
- */
-export function fuseForensicChecks(checks: ForensicModuleResult[]): { score: number; status: ForensicAnalysis["status"] } {
-  const active = checks.filter((item) => item.result !== "not_applicable");
-  if (!active.length) return { score: 0, status: "needs_review" };
-
-  // Tier A Hard Override Conditions:
-  // 1. Deterministic mathematical checksum failure (Verhoeff algorithm / PAN structural regex)
-  // 2. Cryptographic signature failure (UIDAI 2048-bit digital signature / issuer cert)
-  // 3. High-confidence copy-move / clone localization flag
-  // 4. Neural tamper localization flag (TruFor / CAT-Net)
-  const isDeterministicFail = checks.some(
-    (item) =>
-      ["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) &&
-      item.result === "flag"
-  );
-
-  const isHighConfidenceCloneTamperFail = checks.some(
-    (item) =>
-      (item.checkName === "copy_move_clone_detection" && item.result === "flag" && Boolean(item.flaggedRegion)) ||
-      (item.checkName === "trufor_inference" && item.result === "flag" && item.confidence < 40) ||
-      (item.checkName === "catnet_inference" && item.result === "flag" && item.confidence < 40)
-  );
-
-  const tierAHardOverride = isDeterministicFail || isHighConfidenceCloneTamperFail;
-
-  const totalWeight = active.reduce(
-    (sum, item) =>
-      sum +
-      (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName)
-        ? 3.0
-        : item.provider === "trufor" || item.provider === "catnet"
-        ? 2.2
-        : 1.0),
-    0
-  );
-
-  const weighted =
-    active.reduce(
-      (sum, item) =>
-        sum +
-        item.confidence *
-          (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName)
-            ? 3.0
-            : item.provider === "trufor" || item.provider === "catnet"
-            ? 2.2
-            : 1.0),
-      0
-    ) / totalWeight;
-
-  const rawScore = Math.round(weighted);
-  // Tier A Hard Override: forcibly cap overall confidence score below 35 (Likely Forged)
-  const score = tierAHardOverride ? Math.min(34, rawScore) : rawScore;
-  const status: ForensicAnalysis["status"] =
-    score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged";
-
-  return { score, status };
-}
+import { fuseForensicChecks } from "./services/fusion";
+export { fuseForensicChecks };
 
 async function probeWorkerHealth() {
   const url = process.env.FORENSIC_WORKER_URL ? `${process.env.FORENSIC_WORKER_URL.replace(/\/$/, "")}/health` : undefined;

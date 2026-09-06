@@ -194,7 +194,7 @@ export default function Report() {
       </div>
 
       {/* Main Grid: Visualizer + Findings + Records */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.18fr)_minmax(0,0.82fr)]">
         <div>
           {/* Visualizer Mode Tabs */}
           <div className="mb-3 flex items-center justify-between">

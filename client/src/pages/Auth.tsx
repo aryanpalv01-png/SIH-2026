@@ -1,15 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   supabase,
-  formatToE164,
-  isValidE164,
   getAuthRedirectUrl,
   signUpWithEmailPassword,
   signInWithEmailPassword,
   sendEmailOtpOrMagicLink,
   verifyEmailOtp,
-  sendPhoneOtp,
-  verifyPhoneOtp,
 } from "@/lib/supabase";
 import {
   AlertCircle,
@@ -20,7 +16,6 @@ import {
   Loader2,
   LockKeyhole,
   Mail,
-  Phone,
   ShieldCheck,
   Building2,
   Sparkles,
@@ -35,7 +30,7 @@ import { toast } from "sonner";
 
 export function Auth({ params }: { params?: { mode?: string } }) {
   const [location, setLocation] = useLocation();
-  const { user, login, register, quickLogin, verifyOtp } = useAuth();
+  const { user, login, register, quickLogin, verifyOtp, sendOtp } = useAuth();
 
   // Primary mode: "login" or "register"
   const isInitialRegister =
@@ -48,8 +43,8 @@ export function Auth({ params }: { params?: { mode?: string } }) {
     isInitialRegister ? "register" : "login"
   );
 
-  // Login sub-mode: "password" | "email_otp" | "phone_sms"
-  const [loginMethod, setLoginMethod] = useState<"password" | "email_otp" | "phone_sms">("password");
+  // Login sub-mode: "password" | "email_otp"
+  const [loginMethod, setLoginMethod] = useState<"password" | "email_otp">("password");
 
   // Registration form state
   const [regName, setRegName] = useState("");
@@ -63,10 +58,6 @@ export function Auth({ params }: { params?: { mode?: string } }) {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-
-  // Phone SMS state
-  const [phone, setPhone] = useState("");
-  const [countryCode, setCountryCode] = useState("+91");
 
   // Shared OTP step state for OTP flows
   const [otp, setOtp] = useState("");
@@ -247,7 +238,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
   };
 
   /**
-   * ACTION 3: Send Email OTP (Login Code / Magic Link)
+   * ACTION 3: Send Email OTP (Login Code / Magic Link with Resend & Supabase)
    */
   const handleSendEmailOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -264,19 +255,29 @@ export function Auth({ params }: { params?: { mode?: string } }) {
 
     try {
       const redirectUrl = getAuthRedirectUrl("/dashboard");
-      const result = await sendEmailOtpOrMagicLink({
+
+      // 1. Dispatch via Supabase Auth
+      await sendEmailOtpOrMagicLink({
         email: cleanEmail,
         redirectTo: redirectUrl,
       });
 
-      if (!result.success) {
-        setError(result.message || "Failed to dispatch email code.");
-        toast.error(`Dispatch Failed: ${result.message}`);
-        return;
+      // 2. Dispatch via backend Resend service
+      let devCodeHint = "";
+      try {
+        const backendRes = await sendOtp({
+          email: cleanEmail,
+          redirectUrl,
+        });
+        if (backendRes?.devCode) {
+          devCodeHint = ` (Testing Code: ${backendRes.devCode})`;
+        }
+      } catch (backendErr) {
+        console.warn("Backend email dispatch note:", backendErr);
       }
 
       setOtpStep(2);
-      const msg = `A 6-digit passcode has been sent to ${cleanEmail}. Click the email link or enter the code below.`;
+      const msg = `A 6-digit passcode has been sent to ${cleanEmail}.${devCodeHint} Click the email confirmation link or enter the code below.`;
       setSuccessMessage(msg);
       toast.success("Login Code Dispatched", { description: msg });
     } catch (err: any) {
@@ -306,115 +307,37 @@ export function Auth({ params }: { params?: { mode?: string } }) {
 
     try {
       const cleanEmail = loginEmail.trim().toLowerCase();
-      const result = await verifyEmailOtp({
-        email: cleanEmail,
-        token: cleanOtp,
-      });
 
-      if (!result.success) {
-        setError(result.message || "Invalid or expired passcode.");
-        toast.error(`Verification Failed: ${result.message}`);
-        return;
-      }
-
+      // 1. Try backend verification first (Resend / server memory / testing bypass)
+      let backendSuccess = false;
       try {
         await verifyOtp({
           email: cleanEmail,
           token: cleanOtp,
         });
-      } catch (syncErr) {
-        console.warn("Server session sync notice:", syncErr);
+        backendSuccess = true;
+      } catch (backendErr) {
+        console.warn("Backend verify attempted:", backendErr);
       }
 
-      toast.success("Identity verified successfully");
+      // 2. Try Supabase verification if backend didn't authenticate
+      if (!backendSuccess) {
+        const result = await verifyEmailOtp({
+          email: cleanEmail,
+          token: cleanOtp,
+        });
+        if (!result.success) {
+          throw new Error(result.message || "Invalid or expired passcode. Please retry.");
+        }
+      }
+
+      toast.success("Identity verified successfully", {
+        description: "Welcome to the VeriScan Forensic Workspace.",
+      });
       setLocation("/dashboard");
     } catch (err: any) {
       console.error("VERIFY_OTP_ERROR:", err);
       setError(err?.message || "Verification code invalid or expired.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * ACTION 5: Send Phone SMS OTP
-   */
-  const handleSendPhoneOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-
-    const formattedPhoneNumber = formatToE164(phone, countryCode);
-    if (!formattedPhoneNumber || !isValidE164(formattedPhoneNumber)) {
-      setError(`Invalid phone number (${phone}). Please enter a valid 10-digit mobile number.`);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const result = await sendPhoneOtp(formattedPhoneNumber);
-      if (!result.success) {
-        let msg = result.message || "Failed to dispatch SMS code.";
-        if (msg.includes("Unsupported phone provider") || msg.includes("disabled")) {
-          msg = "SMS gateway is disabled in Supabase. Please use Password or Email OTP login.";
-        }
-        setError(msg);
-        toast.error(`SMS Error: ${msg}`);
-        return;
-      }
-
-      setOtpStep(2);
-      const msg = `A 6-digit security code was dispatched to ${formattedPhoneNumber}.`;
-      setSuccessMessage(msg);
-      toast.success("Security SMS Dispatched", { description: msg });
-    } catch (err: any) {
-      console.error("PHONE_OTP_ERROR:", err);
-      setError(err?.message || "Failed to send SMS code.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * ACTION 6: Verify Phone SMS OTP
-   */
-  const handleVerifyPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-
-    const cleanOtp = otp.trim();
-    if (cleanOtp.length !== 6) {
-      setError("Please enter the complete 6-digit passcode.");
-      return;
-    }
-
-    const formattedPhoneNumber = formatToE164(phone, countryCode);
-    setIsLoading(true);
-
-    try {
-      const result = await verifyPhoneOtp(formattedPhoneNumber, cleanOtp);
-      if (!result.success) {
-        setError(result.message || "Invalid or expired SMS passcode.");
-        toast.error(`Verification Failed: ${result.message}`);
-        return;
-      }
-
-      try {
-        await verifyOtp({
-          phone: formattedPhoneNumber,
-          token: cleanOtp,
-        });
-      } catch (syncErr) {
-        console.warn("Server session sync notice:", syncErr);
-      }
-
-      toast.success("Identity verified successfully");
-      setLocation("/dashboard");
-    } catch (err: any) {
-      console.error("VERIFY_PHONE_ERROR:", err);
-      setError(err?.message || "Invalid or expired verification code.");
     } finally {
       setIsLoading(false);
     }
@@ -482,10 +405,8 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                 : otpStep === 1
                 ? loginMethod === "password"
                   ? "Enter your official email and password to access the workspace."
-                  : loginMethod === "email_otp"
-                  ? "Enter your email to receive a 6-digit login passcode or magic link."
-                  : "Enter your mobile phone number to receive an SMS passcode."
-                : `Enter the 6-digit passcode sent to your ${loginMethod === "email_otp" ? "email" : "phone"}.`}
+                  : "Enter your email to receive a 6-digit login passcode or magic link."
+                : `Enter the 6-digit passcode sent to ${loginEmail}.`}
             </p>
           </div>
 
@@ -515,22 +436,22 @@ export function Auth({ params }: { params?: { mode?: string } }) {
             </button>
           </div>
 
-          {/* Sub-Tabs for Login Mode (Password vs Email OTP vs Phone SMS) */}
+          {/* Sub-Tabs for Login Mode (Password vs Email OTP) */}
           {mainMode === "login" && otpStep === 1 && (
-            <div className="mt-3.5 flex flex-wrap rounded-[8px] bg-[#2A2C30]/5 p-1 text-[11px] font-semibold">
+            <div className="mt-3.5 grid grid-cols-2 rounded-[8px] bg-[#2A2C30]/5 p-1 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => {
                   setLoginMethod("password");
                   setError(null);
                 }}
-                className={`flex-1 min-w-[90px] py-1.5 rounded-[5px] transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                className={`py-1.5 rounded-[6px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   loginMethod === "password"
                     ? "bg-white text-[#2A2C30] shadow-xs font-bold"
                     : "text-[#2A2C30]/60 hover:text-[#2A2C30]"
                 }`}
               >
-                <KeyRound className="h-3 w-3" /> Password
+                <KeyRound className="h-3.5 w-3.5" /> Password
               </button>
               <button
                 type="button"
@@ -538,27 +459,13 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   setLoginMethod("email_otp");
                   setError(null);
                 }}
-                className={`flex-1 min-w-[90px] py-1.5 rounded-[5px] transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                className={`py-1.5 rounded-[6px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   loginMethod === "email_otp"
                     ? "bg-white text-[#2A2C30] shadow-xs font-bold"
                     : "text-[#2A2C30]/60 hover:text-[#2A2C30]"
                 }`}
               >
-                <Mail className="h-3 w-3" /> Email OTP
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMethod("phone_sms");
-                  setError(null);
-                }}
-                className={`flex-1 min-w-[90px] py-1.5 rounded-[5px] transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  loginMethod === "phone_sms"
-                    ? "bg-white text-[#2A2C30] shadow-xs font-bold"
-                    : "text-[#2A2C30]/60 hover:text-[#2A2C30]"
-                }`}
-              >
-                <Phone className="h-3 w-3" /> Phone SMS
+                <Mail className="h-3.5 w-3.5" /> Email OTP
               </button>
             </div>
           )}
@@ -890,59 +797,10 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                 </form>
               )}
 
-              {/* Option C: PHONE SMS STEP 1 */}
-              {otpStep === 1 && loginMethod === "phone_sms" && (
-                <form onSubmit={handleSendPhoneOtp} className="mt-5 space-y-3.5">
-                  <div>
-                    <label
-                      htmlFor="phoneInput"
-                      className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-1.5 flex items-center gap-1.5"
-                    >
-                      <Phone className="h-3.5 w-3.5 text-[#8A6D1F]" /> Mobile Phone Number
-                    </label>
-                    <div className="flex rounded-[8px] border border-[#2A2C30]/20 bg-white focus-within:border-[#8A6D1F] focus-within:ring-1 focus-within:ring-[#8A6D1F] transition-all">
-                      <span className="flex items-center px-3 border-r border-[#2A2C30]/15 text-xs font-bold text-[#2A2C30]/80 select-none">
-                        {countryCode}
-                      </span>
-                      <input
-                        id="phoneInput"
-                        type="tel"
-                        required
-                        autoFocus
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="98765 43210"
-                        className="w-full h-11 px-3 py-2 text-sm sm:text-base text-[#2A2C30] bg-transparent focus:outline-none placeholder-[#2A2C30]/40"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={isLoading || !phone.trim()}
-                      className="w-full h-11 sm:h-12 rounded-[8px] bg-[#8A6D1F] hover:bg-[#B08D2E] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Dispatching SMS Code…</span>
-                        </>
-                      ) : (
-                        <>
-                          <Phone className="h-4 w-4" />
-                          <span>Send SMS Passcode</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* STEP 2: 6-DIGIT OTP PASSCODE VERIFICATION (EMAIL OR PHONE) */}
+              {/* STEP 2: 6-DIGIT OTP PASSCODE VERIFICATION */}
               {otpStep === 2 && (
                 <form
-                  onSubmit={loginMethod === "email_otp" ? handleVerifyEmailOtp : handleVerifyPhoneOtp}
+                  onSubmit={handleVerifyEmailOtp}
                   className="mt-5 space-y-4"
                 >
                   <div>
@@ -954,7 +812,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                         <LockKeyhole className="h-3.5 w-3.5 text-[#8A6D1F]" /> 6-Digit Passcode
                       </span>
                       <span className="font-normal lowercase text-[11px] text-[#2A2C30]/60">
-                        {loginMethod === "email_otp" ? loginEmail : phone}
+                        {loginEmail}
                       </span>
                     </label>
                     <input
@@ -1005,7 +863,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                     <button
                       type="button"
                       disabled={isLoading}
-                      onClick={loginMethod === "email_otp" ? () => handleSendEmailOtp() : () => handleSendPhoneOtp()}
+                      onClick={() => handleSendEmailOtp()}
                       className="font-medium text-[#8A6D1F] hover:text-[#B08D2E] transition-colors cursor-pointer py-1"
                     >
                       Resend Passcode
