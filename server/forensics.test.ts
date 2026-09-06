@@ -29,12 +29,21 @@ describe("forensic module contracts", () => {
     expect(detectCopyMoveAndScreenshot(input).every((item) => item.result === "not_applicable")).toBe(true);
   });
 
-  it("caps hard checksum failures below the likely-forged threshold", () => {
+  it("caps hard checksum failures below the likely-forged threshold (score < 35)", () => {
     const result = fuseForensicChecks([
       { checkName: "checksum_identifier_validation", result: "flag", confidence: 5, explanation: "Invalid identifier", provider: "local", available: true },
       { checkName: "compression_analysis", result: "pass", confidence: 98, explanation: "Consistent", provider: "local", available: true },
     ]);
-    expect(result.score).toBeLessThan(40);
+    expect(result.score).toBeLessThan(35);
+    expect(result.status).toBe("likely_forged");
+  });
+
+  it("caps high-confidence clone-detection failures below 35 via Tier A Hard Override", () => {
+    const result = fuseForensicChecks([
+      { checkName: "copy_move_clone_detection", result: "flag", confidence: 20, explanation: "Duplicated seal found", provider: "local", available: true, flaggedRegion: { x: 10, y: 10, width: 20, height: 20 } },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 95, explanation: "Clean EXIF", provider: "local", available: true },
+    ]);
+    expect(result.score).toBeLessThan(35);
     expect(result.status).toBe("likely_forged");
   });
 

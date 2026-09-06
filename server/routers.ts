@@ -5,7 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { runForensicAnalysis } from "./forensics";
 import { createChecks, createDocument, finalizeDocument, getUserDocumentReport, listUserDocuments, requestDocumentReview, updateDocumentEvidence } from "./db";
-import { storagePut } from "./storage";
+import { storagePut, storageDelete } from "./storage";
 import { authService } from "./authService";
 
 const documentType = z.enum(["aadhaar", "pan", "passport", "marksheet", "bank_statement", "other"]);
@@ -134,6 +134,13 @@ export const appRouter = router({
       await createChecks(analysis.checks.map((check) => ({ documentId: created.id, checkName: check.checkName, result: check.result, confidence: check.confidence, explanation: check.explanation, flaggedRegion: check.flaggedRegion ?? null, provider: check.provider, providerState: analysis.providerHealth[check.provider] ?? "not_applicable" })));
       await updateDocumentEvidence(created.id, ctx.user.id, { providerHealth: analysis.providerHealth, extractedFields: analysis.extractedFields, comparisonFindings: analysis.comparisonFindings });
       await finalizeDocument(created.id, ctx.user.id, analysis.status, analysis.score);
+
+      // Automated Data Lifecycle: raw uploaded image is purged to minimize data exposure,
+      // while cryptographic SHA-256 hash, normalized check outcomes, and audit report are retained.
+      if (process.env.AUTO_PURGE_RAW_DOCUMENTS === "true") {
+        await storageDelete(storage.key).catch(() => {});
+      }
+
       return { id: created.id, referenceCode, status: analysis.status, confidenceScore: analysis.score };
     }),
     requestReview: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ ctx, input }) => requestDocumentReview(input.id, ctx.user.id)),

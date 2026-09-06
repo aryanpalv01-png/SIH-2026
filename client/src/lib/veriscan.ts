@@ -42,7 +42,6 @@ export const scanStages = [
   "Checking compression consistency",
   "Analyzing text & fonts",
   "Verifying QR / checksum",
-  "Cross-referencing patterns",
   "Finalizing report",
 ] as const;
 

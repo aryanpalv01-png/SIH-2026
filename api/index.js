@@ -174,13 +174,45 @@ async function typographyConsistency(input) {
     return check("ocr_typography_consistency", "not_applicable", 0, "OCR typography inference was unavailable; the signal was excluded rather than guessed.", "ocr");
   }
 }
-async function callHuggingFace(input) {
+async function redactPiiForExternalInference(input, ocrFields = {}) {
+  if (!input.content || !/^image\//.test(input.mimeType)) return input.content || Buffer.alloc(0);
+  const decoded = decodeImage(input);
+  if (!decoded) return input.content;
+  const startY = Math.floor(decoded.height * 0.35);
+  const endY = Math.floor(decoded.height * 0.78);
+  const startX = Math.floor(decoded.width * 0.12);
+  const endX = Math.floor(decoded.width * 0.88);
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      const idx = (y * decoded.width + x) * 4;
+      decoded.data[idx] = 18;
+      decoded.data[idx + 1] = 18;
+      decoded.data[idx + 2] = 18;
+    }
+  }
+  try {
+    const encoded = jpeg.encode({ data: Buffer.from(decoded.data), width: decoded.width, height: decoded.height }, 85);
+    return encoded.data;
+  } catch {
+    return input.content;
+  }
+}
+async function callHuggingFace(input, ocrFields = {}) {
   if (!input.content || !/^image\//.test(input.mimeType)) return check("ai_generated_image_detector", "not_applicable", 0, "AI-image detection is only applicable to image uploads, not PDF bytes.", "huggingface");
   if (!process.env.HF_API_TOKEN) return check("ai_generated_image_detector", "not_applicable", 0, "Hugging Face inference is not configured. Add HF_API_TOKEN to enable this optional signal.", "huggingface");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12e3);
   try {
-    const response = await fetch("https://router.huggingface.co/hf-inference/models/Organika/sdxl-detector", { method: "POST", headers: { Authorization: `Bearer ${process.env.HF_API_TOKEN}`, "Content-Type": input.mimeType }, body: input.content, signal: controller.signal });
+    const sanitizedBytes = await redactPiiForExternalInference(input, ocrFields);
+    const response = await fetch("https://router.huggingface.co/hf-inference/models/Organika/sdxl-detector", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
+        "Content-Type": "image/jpeg"
+      },
+      body: sanitizedBytes,
+      signal: controller.signal
+    });
     if (!response.ok) return check("ai_generated_image_detector", "not_applicable", 0, `Hugging Face returned ${response.status}; the AI-image signal was excluded from this report.`, "huggingface");
     const payload = await response.json();
     const aiLabel = payload.find((item) => /art|ai|generated|fake/i.test(item.label ?? ""));
@@ -225,11 +257,25 @@ async function callExternalAdapter(name, input) {
 function fuseForensicChecks(checks2) {
   const active = checks2.filter((item) => item.result !== "not_applicable");
   if (!active.length) return { score: 0, status: "needs_review" };
-  const hardFail = checks2.some((item) => ["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) && item.result === "flag");
-  const totalWeight = active.reduce((sum, item) => sum + (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 2.8 : item.provider === "trufor" || item.provider === "catnet" ? 2 : 1), 0);
-  const weighted = active.reduce((sum, item) => sum + item.confidence * (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 2.8 : item.provider === "trufor" || item.provider === "catnet" ? 2 : 1), 0) / totalWeight;
-  const score = hardFail ? Math.min(29, Math.round(weighted)) : Math.round(weighted);
-  return { score, status: score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged" };
+  const isDeterministicFail = checks2.some(
+    (item) => ["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) && item.result === "flag"
+  );
+  const isHighConfidenceCloneTamperFail = checks2.some(
+    (item) => item.checkName === "copy_move_clone_detection" && item.result === "flag" && Boolean(item.flaggedRegion) || item.checkName === "trufor_inference" && item.result === "flag" && item.confidence < 40 || item.checkName === "catnet_inference" && item.result === "flag" && item.confidence < 40
+  );
+  const tierAHardOverride = isDeterministicFail || isHighConfidenceCloneTamperFail;
+  const totalWeight = active.reduce(
+    (sum, item) => sum + (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 3 : item.provider === "trufor" || item.provider === "catnet" ? 2.2 : 1),
+    0
+  );
+  const weighted = active.reduce(
+    (sum, item) => sum + item.confidence * (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 3 : item.provider === "trufor" || item.provider === "catnet" ? 2.2 : 1),
+    0
+  ) / totalWeight;
+  const rawScore = Math.round(weighted);
+  const score = tierAHardOverride ? Math.min(34, rawScore) : rawScore;
+  const status = score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged";
+  return { score, status };
 }
 async function probeWorkerHealth() {
   const url = process.env.FORENSIC_WORKER_URL ? `${process.env.FORENSIC_WORKER_URL.replace(/\/$/, "")}/health` : void 0;
@@ -315,7 +361,18 @@ async function runForensicAnalysis(input) {
   }
   const ocr = await typographyConsistency(input);
   const extractedFields = ocr.extractedFields ?? {};
-  const checks2 = [await inspectMetadata(input), validateDocumentIdentifier(input, extractedFields), await verifyQrOrBarcode(input, extractedFields), analyzeCompressionAndEla(input), ...detectCopyMoveAndScreenshot(input), ocr, await callHuggingFace(input), await callExternalAdapter("trufor", input), await callExternalAdapter("catnet", input), ...await callExternalPixelAdapter(input)];
+  const checks2 = [
+    await inspectMetadata(input),
+    validateDocumentIdentifier(input, extractedFields),
+    await verifyQrOrBarcode(input, extractedFields),
+    analyzeCompressionAndEla(input),
+    ...detectCopyMoveAndScreenshot(input),
+    ocr,
+    await callHuggingFace(input, extractedFields),
+    await callExternalAdapter("trufor", input),
+    await callExternalAdapter("catnet", input),
+    ...await callExternalPixelAdapter(input)
+  ];
   const fused = fuseForensicChecks(checks2);
   const providers = checks2.reduce((result, item) => {
     result[item.provider] = item.result === "not_applicable" ? item.provider === "local" ? "not_applicable" : process.env[providerConfigKey(item.provider)] ? "not_applicable" : "not_configured" : "active";
@@ -1185,6 +1242,31 @@ async function storagePut(relKey, data, contentType = "application/octet-stream"
   }
   return { key, url: `/manus-storage/${key}` };
 }
+async function storageDelete(relKey) {
+  const key = normalizeKey(relKey);
+  const config = getForgeConfig();
+  if (!config) {
+    const targetPath = path.join(LOCAL_STORAGE_DIR, key);
+    try {
+      await fs.unlink(targetPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  const { forgeUrl, forgeKey } = config;
+  const delUrl = new URL("v1/storage/delete", forgeUrl + "/");
+  delUrl.searchParams.set("path", key);
+  try {
+    const resp = await fetch(delUrl, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${forgeKey}` }
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
 
 // server/authService.ts
 import crypto2 from "crypto";
@@ -1578,6 +1660,10 @@ var appRouter = router({
       await createChecks(analysis.checks.map((check2) => ({ documentId: created.id, checkName: check2.checkName, result: check2.result, confidence: check2.confidence, explanation: check2.explanation, flaggedRegion: check2.flaggedRegion ?? null, provider: check2.provider, providerState: analysis.providerHealth[check2.provider] ?? "not_applicable" })));
       await updateDocumentEvidence(created.id, ctx.user.id, { providerHealth: analysis.providerHealth, extractedFields: analysis.extractedFields, comparisonFindings: analysis.comparisonFindings });
       await finalizeDocument(created.id, ctx.user.id, analysis.status, analysis.score);
+      if (process.env.AUTO_PURGE_RAW_DOCUMENTS === "true") {
+        await storageDelete(storage.key).catch(() => {
+        });
+      }
       return { id: created.id, referenceCode, status: analysis.status, confidenceScore: analysis.score };
     }),
     requestReview: protectedProcedure.input(z2.object({ id: z2.number().int().positive() })).mutation(({ ctx, input }) => requestDocumentReview(input.id, ctx.user.id))

@@ -112,3 +112,36 @@ export async function storageGetSignedUrl(relKey: string): Promise<string> {
   const { url } = (await resp.json()) as { url: string };
   return url;
 }
+
+/**
+ * Data Lifecycle & Automated Scrubbing:
+ * Permanently removes raw uploaded document bytes from storage after report generation.
+ */
+export async function storageDelete(relKey: string): Promise<boolean> {
+  const key = normalizeKey(relKey);
+  const config = getForgeConfig();
+
+  if (!config) {
+    const targetPath = path.join(LOCAL_STORAGE_DIR, key);
+    try {
+      await fs.unlink(targetPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const { forgeUrl, forgeKey } = config;
+  const delUrl = new URL("v1/storage/delete", forgeUrl + "/");
+  delUrl.searchParams.set("path", key);
+
+  try {
+    const resp = await fetch(delUrl, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${forgeKey}` },
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}

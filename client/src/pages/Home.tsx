@@ -37,17 +37,17 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-charcoal text-paper">
+    <div className="min-h-screen bg-[#2A2C30] text-[#FAF7F0]">
       {/* Official Government of India Top Masthead */}
       <GovMasthead theme="dark" />
 
       {/* Main Header */}
-      <header className="relative z-10 border-b border-white/10 bg-[#081528]/90 backdrop-blur-md">
+      <header className="relative z-10 border-b border-[#FAF7F0]/10 bg-[#2A2C30]/95 backdrop-blur-md">
         <div className="container flex min-h-[66px] sm:min-h-[76px] items-center justify-between gap-3 sm:gap-6 px-4 sm:px-6">
           <Link href="/" className="shrink-0 flex items-center">
             <VeriScanLogo />
           </Link>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-slate-300 md:flex" aria-label="Primary navigation">
+          <nav className="hidden items-center gap-8 text-sm font-medium text-[#D1CEC7] md:flex" aria-label="Primary navigation">
             <a href="#how-it-works" className="hover:text-white transition-colors">Forensic Pipeline</a>
             <a href="#security" className="hover:text-white transition-colors">DPI Security</a>
             <a href="#use-cases" className="hover:text-white transition-colors">National Use Cases</a>
@@ -74,7 +74,7 @@ export default function Home() {
               </>
             )}
             <Link href={user ? "/verify" : "/auth/login"}>
-              <Button size="sm" className="h-8.5 sm:h-9 px-2.5 sm:px-3.5 text-xs sm:text-sm rounded-lg bg-saffron text-slate-950 font-bold hover:bg-saffron-dark hover:text-white shadow-xs">
+              <Button size="sm" className="h-8.5 sm:h-9 px-2.5 sm:px-3.5 text-xs sm:text-sm rounded-lg bg-[#8A6D1F] text-[#FAF7F0] font-bold hover:bg-[#B08D2E] shadow-xs">
                 Screen <span className="hidden xs:inline">Document</span>
               </Button>
             </Link>

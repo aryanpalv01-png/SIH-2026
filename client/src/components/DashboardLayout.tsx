@@ -182,7 +182,7 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#F8FAFC]">
+    <div className="flex min-h-screen w-full flex-col bg-[#FAF7F0]">
       {/* Official Government of India Top Masthead */}
       <GovMasthead theme="dark" />
 
@@ -191,7 +191,7 @@ function DashboardLayoutContent({
         <div ref={sidebarRef} className="relative">
           <Sidebar
             collapsible="icon"
-            className="border-white/10 bg-[#0A192F] text-white"
+            className="border-white/10 bg-[#2A2C30] text-[#FAF7F0]"
             disableTransition={isResizing}
           >
             <SidebarHeader className="h-20 justify-center border-b border-white/10 px-3">
@@ -321,9 +321,9 @@ function DashboardLayoutContent({
         </div>
 
         {/* Main Content Pane */}
-        <SidebarInset className="min-h-screen bg-[#F8FAFC] text-slate-900">
+        <SidebarInset className="min-h-screen bg-[#FAF7F0] text-[#2A2C30]">
           {isMobile && (
-            <div className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md">
+            <div className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-[#E2DBD0] bg-[#FAF7F0]/95 px-4 backdrop-blur-md">
               <SidebarTrigger className="h-9 w-9 rounded-lg border border-slate-200" />
               <span className="font-serif text-base font-bold text-slate-900">
                 {activeMenuItem.label}

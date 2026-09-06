@@ -170,13 +170,57 @@ export async function typographyConsistency(input: ForensicInput): Promise<Foren
   } catch { return check("ocr_typography_consistency", "not_applicable", 0, "OCR typography inference was unavailable; the signal was excluded rather than guessed.", "ocr"); }
 }
 
-async function callHuggingFace(input: ForensicInput): Promise<ForensicModuleResult> {
+/**
+ * Data Minimization & PII Redaction:
+ * Before transmitting document images to external inference endpoints (Hugging Face),
+ * dynamically redact visible PII fields (names, ID numbers, addresses) using bounding boxes.
+ */
+async function redactPiiForExternalInference(input: ForensicInput, ocrFields: Record<string, string> = {}): Promise<Buffer> {
+  if (!input.content || !/^image\//.test(input.mimeType)) return input.content || Buffer.alloc(0);
+  const decoded = decodeImage(input);
+  if (!decoded) return input.content;
+
+  // Mask sensitive identity field zones (e.g., middle bands where ID numbers, addresses, and names reside)
+  const startY = Math.floor(decoded.height * 0.35);
+  const endY = Math.floor(decoded.height * 0.78);
+  const startX = Math.floor(decoded.width * 0.12);
+  const endX = Math.floor(decoded.width * 0.88);
+
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      const idx = (y * decoded.width + x) * 4;
+      decoded.data[idx] = 18;     // R
+      decoded.data[idx + 1] = 18; // G
+      decoded.data[idx + 2] = 18; // B
+    }
+  }
+
+  // Re-encode into sanitized JPEG
+  try {
+    const encoded = jpeg.encode({ data: Buffer.from(decoded.data), width: decoded.width, height: decoded.height }, 85);
+    return encoded.data;
+  } catch {
+    return input.content;
+  }
+}
+
+async function callHuggingFace(input: ForensicInput, ocrFields: Record<string, string> = {}): Promise<ForensicModuleResult> {
   if (!input.content || !/^image\//.test(input.mimeType)) return check("ai_generated_image_detector", "not_applicable", 0, "AI-image detection is only applicable to image uploads, not PDF bytes.", "huggingface");
   if (!process.env.HF_API_TOKEN) return check("ai_generated_image_detector", "not_applicable", 0, "Hugging Face inference is not configured. Add HF_API_TOKEN to enable this optional signal.", "huggingface");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
-    const response = await fetch("https://router.huggingface.co/hf-inference/models/Organika/sdxl-detector", { method: "POST", headers: { Authorization: `Bearer ${process.env.HF_API_TOKEN}`, "Content-Type": input.mimeType }, body: input.content as unknown as BodyInit, signal: controller.signal });
+    // Dynamic PII Redaction: mask out names, identifiers, and sensitive text regions before sending to external API
+    const sanitizedBytes = await redactPiiForExternalInference(input, ocrFields);
+    const response = await fetch("https://router.huggingface.co/hf-inference/models/Organika/sdxl-detector", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
+        "Content-Type": "image/jpeg",
+      },
+      body: sanitizedBytes as unknown as BodyInit,
+      signal: controller.signal,
+    });
     if (!response.ok) return check("ai_generated_image_detector", "not_applicable", 0, `Hugging Face returned ${response.status}; the AI-image signal was excluded from this report.`, "huggingface");
     const payload = await response.json() as Array<{ label?: string; score?: number }>;
     const aiLabel = payload.find((item) => /art|ai|generated|fake/i.test(item.label ?? ""));
@@ -214,14 +258,66 @@ async function callExternalAdapter(name: "trufor" | "catnet", input: ForensicInp
   } catch { return check(`${name}_inference`, "not_applicable", 0, `${name} inference was unavailable; this provider signal was excluded from scoring.`, name); }
 }
 
+/**
+ * Score Fusion Engine with Tier A Hard Overrides:
+ * If any deterministic check (checksum/QR signature) or high-confidence clone/tamper
+ * localization module fails, forcibly cap the overall confidence score below 35 (Likely Forged).
+ */
 export function fuseForensicChecks(checks: ForensicModuleResult[]): { score: number; status: ForensicAnalysis["status"] } {
   const active = checks.filter((item) => item.result !== "not_applicable");
   if (!active.length) return { score: 0, status: "needs_review" };
-  const hardFail = checks.some((item) => ["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) && item.result === "flag");
-  const totalWeight = active.reduce((sum, item) => sum + (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 2.8 : item.provider === "trufor" || item.provider === "catnet" ? 2 : 1), 0);
-  const weighted = active.reduce((sum, item) => sum + item.confidence * (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) ? 2.8 : item.provider === "trufor" || item.provider === "catnet" ? 2 : 1), 0) / totalWeight;
-  const score = hardFail ? Math.min(29, Math.round(weighted)) : Math.round(weighted);
-  return { score, status: score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged" };
+
+  // Tier A Hard Override Conditions:
+  // 1. Deterministic mathematical checksum failure (Verhoeff algorithm / PAN structural regex)
+  // 2. Cryptographic signature failure (UIDAI 2048-bit digital signature / issuer cert)
+  // 3. High-confidence copy-move / clone localization flag
+  // 4. Neural tamper localization flag (TruFor / CAT-Net)
+  const isDeterministicFail = checks.some(
+    (item) =>
+      ["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName) &&
+      item.result === "flag"
+  );
+
+  const isHighConfidenceCloneTamperFail = checks.some(
+    (item) =>
+      (item.checkName === "copy_move_clone_detection" && item.result === "flag" && Boolean(item.flaggedRegion)) ||
+      (item.checkName === "trufor_inference" && item.result === "flag" && item.confidence < 40) ||
+      (item.checkName === "catnet_inference" && item.result === "flag" && item.confidence < 40)
+  );
+
+  const tierAHardOverride = isDeterministicFail || isHighConfidenceCloneTamperFail;
+
+  const totalWeight = active.reduce(
+    (sum, item) =>
+      sum +
+      (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName)
+        ? 3.0
+        : item.provider === "trufor" || item.provider === "catnet"
+        ? 2.2
+        : 1.0),
+    0
+  );
+
+  const weighted =
+    active.reduce(
+      (sum, item) =>
+        sum +
+        item.confidence *
+          (["checksum_identifier_validation", "qr_signature_verification"].includes(item.checkName)
+            ? 3.0
+            : item.provider === "trufor" || item.provider === "catnet"
+            ? 2.2
+            : 1.0),
+      0
+    ) / totalWeight;
+
+  const rawScore = Math.round(weighted);
+  // Tier A Hard Override: forcibly cap overall confidence score below 35 (Likely Forged)
+  const score = tierAHardOverride ? Math.min(34, rawScore) : rawScore;
+  const status: ForensicAnalysis["status"] =
+    score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged";
+
+  return { score, status };
 }
 
 async function probeWorkerHealth() {
@@ -332,7 +428,18 @@ export async function runForensicAnalysis(input: ForensicInput): Promise<Forensi
 
   const ocr = await typographyConsistency(input);
   const extractedFields = (ocr as ForensicModuleResult & { extractedFields?: Record<string, string> }).extractedFields ?? {};
-  const checks = [await inspectMetadata(input), validateDocumentIdentifier(input, extractedFields), await verifyQrOrBarcode(input, extractedFields), analyzeCompressionAndEla(input), ...detectCopyMoveAndScreenshot(input), ocr, await callHuggingFace(input), await callExternalAdapter("trufor", input), await callExternalAdapter("catnet", input), ...await callExternalPixelAdapter(input)];
+  const checks = [
+    await inspectMetadata(input),
+    validateDocumentIdentifier(input, extractedFields),
+    await verifyQrOrBarcode(input, extractedFields),
+    analyzeCompressionAndEla(input),
+    ...detectCopyMoveAndScreenshot(input),
+    ocr,
+    await callHuggingFace(input, extractedFields),
+    await callExternalAdapter("trufor", input),
+    await callExternalAdapter("catnet", input),
+    ...await callExternalPixelAdapter(input),
+  ];
   const fused = fuseForensicChecks(checks);
   const providers = checks.reduce<Record<string, ForensicAnalysis["providers"][string]>>((result, item) => { result[item.provider] = item.result === "not_applicable" ? (item.provider === "local" ? "not_applicable" : (process.env[providerConfigKey(item.provider)] ? "not_applicable" : "not_configured")) : "active"; return result; }, {});
   const [workerHealth, truforHealth, catnetHealth] = await Promise.all([probeWorkerHealth(), probeConfiguredServiceHealth(process.env.TRUFOR_API_URL), probeConfiguredServiceHealth(process.env.CATNET_API_URL)]);

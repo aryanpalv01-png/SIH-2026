@@ -17,8 +17,8 @@ export function GovMasthead({ theme = "dark", compact = false }: GovMastheadProp
       <div
         className={`px-4 py-1.5 text-[11px] font-medium transition-colors ${
           isDark
-            ? "bg-[#060E1A] text-slate-300 border-b border-white/10"
-            : "bg-slate-100 text-slate-700 border-b border-slate-200"
+            ? "bg-[#2A2C30] text-[#D1CEC7] border-b border-[#FAF7F0]/10"
+            : "bg-[#EEE8DA] text-[#2A2C30] border-b border-[#E2DBD0]"
         }`}
       >
         <div className="mx-auto flex max-w-[1400px] items-center justify-between">
