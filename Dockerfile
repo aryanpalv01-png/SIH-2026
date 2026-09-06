@@ -1,46 +1,42 @@
 # ==============================================================================
-# VeriScan Fast-Check Service (FastAPI Microservice) Dockerfile
-# Optimized for Render / Railway containerized deployment
+# BharatDrishti Production Dockerfile (Vite Frontend + Express Backend)
+# Optimized for Render Web Service deployment
 # ==============================================================================
 
-FROM python:3.11-slim
+FROM node:22-slim
 
-# Prevent Python from writing bytecode and enable unbuffered logging
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install necessary C++ system dependencies:
-# - tesseract-ocr & eng: OCR text recognition
-# - libzbar0: QR code / Barcode decoding
-# - libgl1 & libglib2.0-0: OpenCV headless image manipulation dependencies
+# Install system dependencies (curl for container health checks)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    libzbar0 \
-    libgl1 \
-    libglib2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install pnpm matching project version
+RUN npm install -g pnpm@10
+
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency manifests
+COPY package.json pnpm-lock.yaml ./
 
-# Copy application source code
+# Install all dependencies (required for building frontend and bundled server)
+RUN pnpm install --frozen-lockfile || pnpm install
+
+# Copy application source files
 COPY . .
 
-# Set working directory to services/forensic-worker for direct model and module access
-WORKDIR /app/services/forensic-worker
+# Build Vite client assets into dist/public and bundle Express server into dist/index.js
+RUN pnpm run build
 
-# Expose service port (Render injects PORT dynamically at runtime, default 8000)
-ENV PORT=8000
-EXPOSE 8000
+# Configure runtime environment
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=10000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+EXPOSE 10000
 
-# Start the FastAPI server using uvicorn
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Health check against dedicated Express endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://127.0.0.1:${PORT:-10000}/health || exit 1
+
+# Start the Express server
+CMD ["node", "dist/index.js"]
