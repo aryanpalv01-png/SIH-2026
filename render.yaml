@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: BharatDrishti
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm start
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
