@@ -21,6 +21,22 @@ function isModuleOfflineOrUninitialized(c) {
   if (isOfflineMention) return true;
   return false;
 }
+function isTierAFailure(c) {
+  if (c.result !== "flag") return false;
+  if (DETERMINISTIC_TIER_A_CHECKS.has(c.checkName)) {
+    return true;
+  }
+  const expl = (c.explanation || "").toLowerCase();
+  const isCloneOrTamper = c.checkName === "copy_move_clone_detection" || c.checkName === "pixel_clone_worker" || c.checkName === "trufor_inference" || c.checkName === "catnet_inference";
+  if (isCloneOrTamper) {
+    const isExplicitHighConfidence = expl.includes("high-confidence") || expl.includes("high confidence") || expl.includes("confirmed clone") || expl.includes("confirmed tamper") || expl.includes("dense duplicate") || expl.includes("sift keypoint match") || expl.includes("orb keypoint match");
+    const isVeryHighTamperConfidence = c.confidence <= 20;
+    if (isExplicitHighConfidence || isVeryHighTamperConfidence) {
+      return true;
+    }
+  }
+  return false;
+}
 function fuseForensicChecks(checks2) {
   for (const c of checks2) {
     if (isModuleOfflineOrUninitialized(c)) {
@@ -43,45 +59,64 @@ function fuseForensicChecks(checks2) {
     };
   }
   const tierAFailures = [];
+  const tierBFailures = [];
   for (const c of active) {
     if (c.result !== "flag") continue;
-    if (DETERMINISTIC_TIER_A_CHECKS.has(c.checkName)) {
+    if (isTierAFailure(c)) {
       tierAFailures.push(`${c.checkName}: ${c.explanation}`);
+    } else {
+      tierBFailures.push(`${c.checkName}: ${c.explanation}`);
     }
   }
   const isTierAFailed = tierAFailures.length > 0;
-  const tierBFailures = active.filter((c) => HEURISTIC_CHECKS.has(c.checkName) && c.result === "flag").map((c) => `${c.checkName}: ${c.explanation}`);
   const isCumulativeHeuristicFail = tierBFailures.length >= 2;
   const isSingleHeuristicFail = tierBFailures.length === 1;
-  let totalWeight = 0;
-  let weightedSum = 0;
-  for (const item of active) {
-    const weight = MODULE_WEIGHTS[item.checkName] ?? 1;
-    totalWeight += weight;
-    weightedSum += item.confidence * weight;
-  }
-  const rawScore = Math.round(weightedSum / Math.max(0.1, totalWeight));
-  let score = rawScore;
+  const BASE_SCORE = 100;
   let penaltiesApplied = 0;
+  for (const c of active) {
+    if (c.result === "pass") {
+      if (c.confidence < 70) {
+        penaltiesApplied += Math.round((85 - c.confidence) * 0.15);
+      } else if (c.confidence < 85) {
+        penaltiesApplied += Math.round((85 - c.confidence) * 0.08);
+      }
+    }
+  }
+  const hasStrongPasses = active.some(
+    (c) => c.result === "pass" && c.confidence >= 85
+  );
   if (isCumulativeHeuristicFail) {
-    const penalty = Math.max(35, score - 38);
-    penaltiesApplied += penalty;
-    score = Math.min(38, Math.max(0, score - penalty));
+    for (const failureStr of tierBFailures) {
+      const checkName = failureStr.split(":")[0]?.trim();
+      const deduction = checkName === "ocr_typography_consistency" ? 34 : checkName === "ela_compression_analysis" ? 32 : checkName === "screenshot_capture_detection" ? 32 : 30;
+      penaltiesApplied += deduction;
+    }
   } else if (isSingleHeuristicFail) {
-    const failedCheck = active.find((c) => HEURISTIC_CHECKS.has(c.checkName) && c.result === "flag");
-    const isMinorCompression = failedCheck?.checkName === "ela_compression_analysis";
-    const moderatePenalty = isMinorCompression ? 3 : 5;
-    penaltiesApplied += moderatePenalty;
-    score = Math.max(0, score - moderatePenalty);
-    const hasStrongPasses = active.some(
-      (c) => c.result === "pass" && c.confidence >= 85
-    );
-    if (!isTierAFailed && rawScore >= 80 && hasStrongPasses) {
-      score = Math.max(81, score);
+    const failedCheck = active.find((c) => c.result === "flag" && !isTierAFailure(c));
+    const isMinorCompression = failedCheck?.checkName === "ela_compression_analysis" && (failedCheck.confidence >= 50 || failedCheck.explanation?.toLowerCase().includes("minor") || failedCheck.explanation?.toLowerCase().includes("noise"));
+    const isPreflightClone = failedCheck?.checkName === "copy_move_clone_detection" && failedCheck.explanation?.toLowerCase().includes("potential duplicate patch");
+    if ((isMinorCompression || isPreflightClone) && hasStrongPasses) {
+      const mildDeduction = isMinorCompression ? 12 : 15;
+      penaltiesApplied += mildDeduction;
+    } else {
+      penaltiesApplied += 30;
+    }
+  }
+  let score = Math.max(0, BASE_SCORE - penaltiesApplied);
+  const rawScore = score;
+  if (isCumulativeHeuristicFail) {
+    score = Math.min(36, score);
+  }
+  if (isSingleHeuristicFail && !isTierAFailed && hasStrongPasses) {
+    const failedCheck = active.find((c) => c.result === "flag" && !isTierAFailure(c));
+    const isMinor = failedCheck?.checkName === "ela_compression_analysis" || failedCheck?.explanation?.toLowerCase().includes("potential duplicate patch");
+    if (isMinor) {
+      score = Math.max(85, score);
     }
   }
   if (isTierAFailed) {
-    score = Math.min(34, score);
+    penaltiesApplied += 80;
+    score = Math.min(score, 20);
   }
   const status = score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged";
   return {
@@ -95,34 +130,13 @@ function fuseForensicChecks(checks2) {
     penaltiesApplied
   };
 }
-var MODULE_WEIGHTS, DETERMINISTIC_TIER_A_CHECKS, HEURISTIC_CHECKS;
+var DETERMINISTIC_TIER_A_CHECKS;
 var init_fusion = __esm({
   "server/services/fusion.ts"() {
     "use strict";
-    MODULE_WEIGHTS = {
-      checksum_identifier_validation: 3.5,
-      qr_signature_verification: 3.5,
-      copy_move_clone_detection: 1.8,
-      trufor_inference: 1.8,
-      catnet_inference: 1.8,
-      ocr_typography_consistency: 1.5,
-      screenshot_capture_detection: 1.2,
-      ela_compression_analysis: 1,
-      ai_generated_image_detector: 1,
-      metadata_exif_inspection: 1
-    };
     DETERMINISTIC_TIER_A_CHECKS = /* @__PURE__ */ new Set([
       "checksum_identifier_validation",
       "qr_signature_verification"
-    ]);
-    HEURISTIC_CHECKS = /* @__PURE__ */ new Set([
-      "ela_compression_analysis",
-      "ocr_typography_consistency",
-      "screenshot_capture_detection",
-      "copy_move_clone_detection",
-      "trufor_inference",
-      "catnet_inference",
-      "ai_generated_image_detector"
     ]);
   }
 });

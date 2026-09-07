@@ -101,25 +101,70 @@ export function isModuleOfflineOrUninitialized(c: any): boolean {
 }
 
 /**
+ * Determines whether a flagged check qualifies as a Tier A Hard Override:
+ * 1. Definitive deterministic failure:
+ *    - Mathematical checksum failure (Verhoeff algorithm / PAN structural regex)
+ *    - Cryptographic signature mismatch (UIDAI 2048-bit digital signature / issuer cert)
+ * 2. High-confidence clone / tamper localization:
+ *    - Confirmed copy-move / SIFT/ORB keypoint duplicate clusters or TruFor/CAT-Net tamper localization
+ */
+export function isTierAFailure(c: ForensicModuleResult): boolean {
+  if (c.result !== "flag") return false;
+
+  // 1. Strict deterministic checks: Checksum/Verhoeff or QR signature
+  if (DETERMINISTIC_TIER_A_CHECKS.has(c.checkName)) {
+    return true;
+  }
+
+  // 2. High-confidence clone / tamper localization
+  const expl = (c.explanation || "").toLowerCase();
+  const isCloneOrTamper =
+    c.checkName === "copy_move_clone_detection" ||
+    c.checkName === "pixel_clone_worker" ||
+    c.checkName === "trufor_inference" ||
+    c.checkName === "catnet_inference";
+
+  if (isCloneOrTamper) {
+    const isExplicitHighConfidence =
+      expl.includes("high-confidence") ||
+      expl.includes("high confidence") ||
+      expl.includes("confirmed clone") ||
+      expl.includes("confirmed tamper") ||
+      expl.includes("dense duplicate") ||
+      expl.includes("sift keypoint match") ||
+      expl.includes("orb keypoint match");
+
+    // Very low integrity score (<= 20) indicates high confidence of tampering/clone
+    const isVeryHighTamperConfidence = c.confidence <= 20;
+
+    if (isExplicitHighConfidence || isVeryHighTamperConfidence) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * VeriScan Institutional Score Fusion Engine:
- * Combines granular forensic observations into a transparent Tamper Confidence Score (0–100).
+ * Implements a robust Penalty-Subtraction Model starting from a base score of 100.
  *
- * Rules:
- * 1. Tier A hard overrides apply ONLY to definitive deterministic failures (checksum or QR signature).
- * 2. Visual/heuristic modules are cumulative: a single flag lowers score moderately, while 2 or more
- *    failing simultaneously trigger "Likely Forged" (< 40).
- * 3. Clean, high-resolution genuine documents are protected from getting dragged into "Needs Review"
- *    due to minor compression variations.
- * 4. Offline/Uninitialized Models: If optional models (like TruFor or CAT-Net) return errors, 503, 501,
- *    or null values due to missing local weights, explicitly assign them a status of "not_applicable"
- *    with zero weight in the average. Do NOT fall back to a neutral score of 50.
- * 5. Clean Separation: Uninitialized or missing optional models do not artificially inflate fake
- *    document scores or deflate genuine document scores.
+ * Architecture:
+ * 1. Base Score of 100: All documents start at 100. Points are deducted cumulatively
+ *    based on module failures rather than averaging uninitialized or fallback values.
+ * 2. Hard Tier A Overrides: If a strict deterministic check (Checksum/Verhoeff or QR signature)
+ *    fails, or if a high-confidence clone/tamper localization is flagged, forcibly override
+ *    the final score to a hard ceiling between 15 and 25 ("Likely Forged").
+ * 3. Scale Tier B Penalties: Apply clear, substantial point deductions for visual/typography
+ *    anomalies (-25 to -40 points each) so that flawed documents drop sharply below 40,
+ *    while pristine genuine documents retain their 85+ scores.
+ * 4. Ignore Offline Modules: Any uninitialized or offline modules (e.g. missing GPU model checkpoints)
+ *    return not_applicable with zero weight/deduction and NEVER inject neutral fallback scores like 50.
  */
 export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult {
   // 0. Handle Offline/Uninitialized Models:
   // If forensic modules return errors, 503, 501, or null values due to missing local weights,
-  // explicitly assign them a status of "not_applicable" with zero weight in the average.
+  // explicitly assign them a status of "not_applicable" with zero weight and zero penalty.
   // Do NOT fall back to a neutral score of 50.
   for (const c of checks) {
     if (isModuleOfflineOrUninitialized(c)) {
@@ -143,74 +188,111 @@ export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult
     };
   }
 
-  // 1. Identify Tier A Deterministic Hard Failures ONLY
+  // 1. Classify Failures into Tier A and Tier B
   const tierAFailures: string[] = [];
+  const tierBFailures: string[] = [];
 
   for (const c of active) {
     if (c.result !== "flag") continue;
 
-    // Only definitive deterministic failures trigger Tier A
-    if (DETERMINISTIC_TIER_A_CHECKS.has(c.checkName)) {
+    if (isTierAFailure(c)) {
       tierAFailures.push(`${c.checkName}: ${c.explanation}`);
+    } else {
+      tierBFailures.push(`${c.checkName}: ${c.explanation}`);
     }
   }
 
   const isTierAFailed = tierAFailures.length > 0;
-
-  // 2. Identify Heuristic (Visual / Neural) Failures
-  const tierBFailures = active
-    .filter((c) => HEURISTIC_CHECKS.has(c.checkName) && c.result === "flag")
-    .map((c) => `${c.checkName}: ${c.explanation}`);
-
   const isCumulativeHeuristicFail = tierBFailures.length >= 2;
   const isSingleHeuristicFail = tierBFailures.length === 1;
 
-  // 3. Compute Base Weighted Score (Offline/uninitialized models have 0 weight as they are not in active)
-  let totalWeight = 0;
-  let weightedSum = 0;
-
-  for (const item of active) {
-    const weight = MODULE_WEIGHTS[item.checkName] ?? 1.0;
-    totalWeight += weight;
-    weightedSum += item.confidence * weight;
-  }
-
-  const rawScore = Math.round(weightedSum / Math.max(0.1, totalWeight));
-  let score = rawScore;
+  // 2. Penalty-Subtraction Model: Start from base score 100
+  const BASE_SCORE = 100;
   let penaltiesApplied = 0;
 
-  // 4. Apply Cumulative Heuristic Rules
-  if (isCumulativeHeuristicFail) {
-    // 2 or more heuristic flags failing simultaneously: trigger "Likely Forged" (< 40)
-    const penalty = Math.max(35, score - 38);
-    penaltiesApplied += penalty;
-    score = Math.min(38, Math.max(0, score - penalty));
-  } else if (isSingleHeuristicFail) {
-    // A single heuristic flag: lower score moderately without dragging clean genuine documents down
-    const failedCheck = active.find((c) => HEURISTIC_CHECKS.has(c.checkName) && c.result === "flag");
-    const isMinorCompression = failedCheck?.checkName === "ela_compression_analysis";
-
-    // Minor compression variation penalty is mild (3 points); other single flags deduct 5 points
-    const moderatePenalty = isMinorCompression ? 3 : 5;
-    penaltiesApplied += moderatePenalty;
-    score = Math.max(0, score - moderatePenalty);
-
-    // Rule 3 Protection: Prevent clean, high-resolution genuine documents from getting dragged into "Needs Review"
-    // If the document has strong authentic signals (raw score >= 80 and no deterministic failure),
-    // protect the "verified" status (> 80, e.g. 81-88) from an isolated compression variation or single heuristic flag.
-    const hasStrongPasses = active.some(
-      (c) => c.result === "pass" && c.confidence >= 85
-    );
-
-    if (!isTierAFailed && rawScore >= 80 && hasStrongPasses) {
-      score = Math.max(81, score);
+  // Evaluate passing checks variance
+  // Passing checks with high confidence (>= 85) incur 0 deduction.
+  // Minor variances incur negligible fractional deduction.
+  for (const c of active) {
+    if (c.result === "pass") {
+      if (c.confidence < 70) {
+        penaltiesApplied += Math.round((85 - c.confidence) * 0.15);
+      } else if (c.confidence < 85) {
+        penaltiesApplied += Math.round((85 - c.confidence) * 0.08);
+      }
     }
   }
 
-  // 5. Apply Tier A Hard Override (Definitive Deterministic Failures ONLY)
-  // Forcibly caps score below 35 (Likely Forged), overriding any passing metadata or heuristics
+  // 3. Deduct for Tier B Visual / Typography Anomalies (-25 to -40 points each)
+  const hasStrongPasses = active.some(
+    (c) => c.result === "pass" && c.confidence >= 85
+  );
+
+  if (isCumulativeHeuristicFail) {
+    // 2 or more visual/typography anomalies failing simultaneously:
+    // Apply substantial point deductions (-30 to -35 points per module), dropping sharply below 40.
+    for (const failureStr of tierBFailures) {
+      const checkName = failureStr.split(":")[0]?.trim();
+      const deduction =
+        checkName === "ocr_typography_consistency"
+          ? 34
+          : checkName === "ela_compression_analysis"
+          ? 32
+          : checkName === "screenshot_capture_detection"
+          ? 32
+          : 30;
+      penaltiesApplied += deduction;
+    }
+  } else if (isSingleHeuristicFail) {
+    // Single heuristic flag:
+    const failedCheck = active.find((c) => c.result === "flag" && !isTierAFailure(c));
+    const isMinorCompression =
+      failedCheck?.checkName === "ela_compression_analysis" &&
+      (failedCheck.confidence >= 50 ||
+        failedCheck.explanation?.toLowerCase().includes("minor") ||
+        failedCheck.explanation?.toLowerCase().includes("noise"));
+
+    const isPreflightClone =
+      failedCheck?.checkName === "copy_move_clone_detection" &&
+      failedCheck.explanation?.toLowerCase().includes("potential duplicate patch");
+
+    if ((isMinorCompression || isPreflightClone) && hasStrongPasses) {
+      // Minor isolated compression / preflight warning on a genuine document:
+      // Deduct moderate penalty (-12 to -15 points), keeping pristine score >= 85.
+      const mildDeduction = isMinorCompression ? 12 : 15;
+      penaltiesApplied += mildDeduction;
+    } else {
+      // Standalone significant visual anomaly (e.g. editing software in metadata or font style mismatch):
+      // Deduct -28 to -30 points, placing document in Needs Review (65-75).
+      penaltiesApplied += 30;
+    }
+  }
+
+  // 4. Calculate Raw & Post-Penalty Score
+  let score = Math.max(0, BASE_SCORE - penaltiesApplied);
+  const rawScore = score;
+
+  // If cumulative heuristic failure (2+ Tier B flags), guarantee score drops sharply below 40 (< 40)
+  if (isCumulativeHeuristicFail) {
+    score = Math.min(36, score);
+  }
+
+  // If single heuristic flag on genuine document with strong passes, protect verified status (> 80)
+  if (isSingleHeuristicFail && !isTierAFailed && hasStrongPasses) {
+    const failedCheck = active.find((c) => c.result === "flag" && !isTierAFailure(c));
+    const isMinor =
+      failedCheck?.checkName === "ela_compression_analysis" ||
+      failedCheck?.explanation?.toLowerCase().includes("potential duplicate patch");
+    if (isMinor) {
+      score = Math.max(85, score);
+    }
+  }
+
+  // 5. Apply Tier A Hard Override (Deterministic Failures & High-Confidence Tamper Localization)
+  // Forcibly overrides final score to a hard ceiling between 15 and 25 ("Likely Forged")
   if (isTierAFailed) {
-    score = Math.min(34, score);
+    penaltiesApplied += 80;
+    score = Math.min(score, 20); // Hard ceiling at 20 (between 15 and 25)
   }
 
   // 6. Final Verdict Mapping

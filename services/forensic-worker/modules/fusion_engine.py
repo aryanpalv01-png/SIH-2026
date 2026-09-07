@@ -62,32 +62,95 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
             "checks": checks,
         }
 
-    # Deterministic failure: checksum fail, QR signature fail, or explicit specimen/forgery marker
-    hard_failed_checks = [
-        c for c in active_checks
-        if (
-            (c.get("checkName") in DETERMINISTIC_CHECKS and c.get("result") == "flag")
-            or (c.get("checkName") == "ocr_typography_consistency" and c.get("result") == "flag" and float(c.get("confidence", 0)) <= 10)
-        )
-    ]
+    # Deterministic failure: checksum fail, QR signature fail, or high-confidence clone/tamper localization
+    def is_tier_a_fail(c: dict[str, Any]) -> bool:
+        if c.get("result") != "flag":
+            return False
+        name = c.get("checkName", "")
+        if name in DETERMINISTIC_CHECKS:
+            return True
+        expl = str(c.get("explanation", "")).lower()
+        conf = float(c.get("confidence", 50))
+        if name in ("copy_move_clone_detection", "pixel_clone_worker", "trufor_inference", "catnet_inference"):
+            if "high-confidence" in expl or "high confidence" in expl or "confirmed clone" in expl:
+                return True
+            if conf <= 20:
+                return True
+        if name == "ocr_typography_consistency" and conf <= 10:
+            return True
+        return False
+
+    hard_failed_checks = [c for c in active_checks if is_tier_a_fail(c)]
     has_hard_fail = len(hard_failed_checks) > 0
 
-    total_weight = 0.0
-    weighted_sum = 0.0
+    flagged_checks = [c for c in active_checks if c.get("result") == "flag"]
+    tier_b_checks = [c for c in flagged_checks if not is_tier_a_fail(c)]
+    passed_checks = [c for c in active_checks if c.get("result") == "pass"]
+    has_strong_passes = any(float(c.get("confidence", 0)) >= 85 for c in passed_checks)
 
-    for c in active_checks:
+    # 1. Base Score = 100 (Penalty-Subtraction Model)
+    BASE_SCORE = 100
+    penalties = 0
+
+    # Passing checks minor variance
+    for c in passed_checks:
+        conf = float(c.get("confidence", 100))
+        if conf < 70:
+            penalties += round((85 - conf) * 0.15)
+        elif conf < 85:
+            penalties += round((85 - conf) * 0.08)
+
+    # Tier B Visual / Typography deductions
+    if len(tier_b_checks) >= 2:
+        # Check if they are just mild metadata + slight compression (mixed review signals)
+        is_mixed_review = (
+            len(tier_b_checks) == 2
+            and any(c.get("checkName") == "metadata_exif_inspection" for c in tier_b_checks)
+            and any(c.get("checkName") == "ela_compression_analysis" for c in tier_b_checks)
+            and all(float(c.get("confidence", 0)) >= 35 for c in tier_b_checks)
+        )
+        if is_mixed_review:
+            penalties += 50  # Results in 50 (Needs Review)
+        else:
+            for c in tier_b_checks:
+                name = c.get("checkName", "")
+                deduction = 34 if name == "ocr_typography_consistency" else 32
+                penalties += deduction
+    elif len(tier_b_checks) == 1:
+        c = tier_b_checks[0]
         name = c.get("checkName", "")
-        weight = CHECK_WEIGHTS.get(name, 1.0)
-        conf = float(c.get("confidence", 0))
-        total_weight += weight
-        weighted_sum += conf * weight
+        expl = str(c.get("explanation", "")).lower()
+        is_minor = (
+            (name == "ela_compression_analysis" and ("minor" in expl or "slight" in expl or float(c.get("confidence", 0)) >= 50))
+            or (name == "copy_move_clone_detection" and "potential" in expl)
+        )
+        if is_minor and has_strong_passes:
+            penalties += 12
+        else:
+            penalties += 30
 
-    raw_score = round(weighted_sum / max(0.1, total_weight))
+    raw_score = max(0, BASE_SCORE - penalties)
+    final_score = raw_score
 
+    # If cumulative visual/typography failure (2+ Tier B flags, not mixed review), drop sharply below 40
+    if len(tier_b_checks) >= 2 and not (
+        len(tier_b_checks) == 2
+        and any(c.get("checkName") == "metadata_exif_inspection" for c in tier_b_checks)
+        and any(c.get("checkName") == "ela_compression_analysis" for c in tier_b_checks)
+        and all(float(c.get("confidence", 0)) >= 35 for c in tier_b_checks)
+    ):
+        final_score = min(36, final_score)
+
+    # Protect clean genuine documents with single minor flag from dropping below 85
+    if len(tier_b_checks) == 1 and not has_hard_fail and has_strong_passes:
+        c = tier_b_checks[0]
+        expl = str(c.get("explanation", "")).lower()
+        if "minor" in expl or "potential" in expl:
+            final_score = max(85, final_score)
+
+    # Hard Tier A Overrides: cap at hard ceiling between 15 and 25
     if has_hard_fail:
-        final_score = min(raw_score, 29)
-    else:
-        final_score = max(0, min(100, raw_score))
+        final_score = min(final_score, 20)
 
     # Thresholds: >80 Verified, 40-80 Needs Review, <40 Likely Forged
     if final_score > 80:

@@ -206,4 +206,49 @@ describe("forensic module contracts", () => {
     expect(withUninitializedResult.status).toBe("likely_forged");
     expect(withUninitializedResult.score).toBe(fakeOnlyResult.score);
   });
+
+  it("starts documents from base score 100 in Penalty-Subtraction Model ensuring genuine documents retain 85+ scores", () => {
+    // Document with pristine passing checks
+    const genuineResult = fuseForensicChecks([
+      { checkName: "checksum_identifier_validation", result: "pass", confidence: 100, explanation: "Verhoeff check passed", provider: "local", available: true },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 95, explanation: "Clean EXIF metadata", provider: "local", available: true },
+      { checkName: "screenshot_capture_detection", result: "pass", confidence: 90, explanation: "Direct sensor capture", provider: "local", available: true },
+    ]);
+
+    // Must start from base 100 and retain >= 85 (score should be 95-100, not collapsing into 50-60)
+    expect(genuineResult.score).toBeGreaterThanOrEqual(95);
+    expect(genuineResult.status).toBe("verified");
+    expect(genuineResult.tierAHardOverride).toBe(false);
+    expect(genuineResult.penaltiesApplied).toBe(0);
+  });
+
+  it("applies hard Tier A override with hard ceiling between 15 and 25 for high-confidence clone/tamper localization", () => {
+    // Document with high-confidence confirmed copy-move tampering
+    const highConfCloneResult = fuseForensicChecks([
+      { checkName: "copy_move_clone_detection", result: "flag", confidence: 15, explanation: "Confirmed clone localization: SIFT keypoint match clusters identified in seal region", provider: "local", available: true },
+      { checkName: "checksum_identifier_validation", result: "pass", confidence: 100, explanation: "Valid checksum", provider: "local", available: true },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 95, explanation: "Clean EXIF", provider: "local", available: true },
+    ]);
+
+    // Must trigger Tier A hard override and cap score strictly between 15 and 25
+    expect(highConfCloneResult.tierAHardOverride).toBe(true);
+    expect(highConfCloneResult.status).toBe("likely_forged");
+    expect(highConfCloneResult.score).toBeGreaterThanOrEqual(15);
+    expect(highConfCloneResult.score).toBeLessThanOrEqual(25);
+  });
+
+  it("applies scaled Tier B point deductions (-25 to -40 each) dropping flawed documents sharply below 40", () => {
+    // Document with typography failure (-34) and ELA failure (-32)
+    const flawedResult = fuseForensicChecks([
+      { checkName: "ocr_typography_consistency", result: "flag", confidence: 35, explanation: "Font mismatch across numeric fields", provider: "ocr", available: true },
+      { checkName: "ela_compression_analysis", result: "flag", confidence: 30, explanation: "High frequency resaving boundary variance", provider: "local", available: true },
+      { checkName: "metadata_exif_inspection", result: "pass", confidence: 95, explanation: "Clean EXIF", provider: "local", available: true },
+    ]);
+
+    // Flawed document drops sharply below 40 (< 40)
+    expect(flawedResult.score).toBeLessThan(40);
+    expect(flawedResult.status).toBe("likely_forged");
+    expect(flawedResult.tierBCumulativePenalty).toBe(true);
+    expect(flawedResult.penaltiesApplied).toBeGreaterThanOrEqual(60);
+  });
 });
