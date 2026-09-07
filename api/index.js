@@ -8,6 +8,156 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// server/services/aiDetector.ts
+import jpeg from "jpeg-js";
+import { PNG } from "pngjs";
+function decodeImageForRedaction(input) {
+  if (!input.content || !/^image\//.test(input.mimeType)) return null;
+  try {
+    if (input.mimeType === "image/jpeg") {
+      const decoded = jpeg.decode(input.content, { useTArray: true });
+      return { width: decoded.width, height: decoded.height, data: new Uint8ClampedArray(decoded.data) };
+    }
+    if (input.mimeType === "image/png") {
+      const decoded = PNG.sync.read(input.content);
+      return { width: decoded.width, height: decoded.height, data: new Uint8ClampedArray(decoded.data) };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+async function redactPiiForExternalInference(input, _ocrFields = {}) {
+  if (!input.content || !/^image\//.test(input.mimeType)) {
+    return input.content || Buffer.alloc(0);
+  }
+  const decoded = decodeImageForRedaction(input);
+  if (!decoded) return input.content;
+  const startY = Math.floor(decoded.height * 0.35);
+  const endY = Math.floor(decoded.height * 0.78);
+  const startX = Math.floor(decoded.width * 0.12);
+  const endX = Math.floor(decoded.width * 0.88);
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      const idx = (y * decoded.width + x) * 4;
+      decoded.data[idx] = 18;
+      decoded.data[idx + 1] = 18;
+      decoded.data[idx + 2] = 18;
+    }
+  }
+  try {
+    const encoded = jpeg.encode(
+      { data: Buffer.from(decoded.data), width: decoded.width, height: decoded.height },
+      85
+    );
+    return encoded.data;
+  } catch {
+    return input.content;
+  }
+}
+function buildCheck(result, confidence, explanation) {
+  return {
+    checkName: "ai_generated_image_detector",
+    result,
+    confidence,
+    explanation,
+    provider: "huggingface",
+    available: result !== "not_applicable"
+  };
+}
+function isHuggingFaceConfigured() {
+  return Boolean(process.env.HF_API_TOKEN && process.env.HF_API_TOKEN.trim().length > 0);
+}
+async function detectAiGeneratedImage(input, ocrFields = {}) {
+  if (!input.content || !/^image\//.test(input.mimeType)) {
+    return buildCheck(
+      "not_applicable",
+      0,
+      "AI-image detection is only applicable to image uploads, not PDF bytes."
+    );
+  }
+  const token = process.env.HF_API_TOKEN?.trim();
+  if (!token) {
+    return buildCheck(
+      "not_applicable",
+      0,
+      "Hugging Face inference is not configured. Add HF_API_TOKEN to enable this optional signal."
+    );
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12e3);
+  try {
+    const sanitizedBytes = await redactPiiForExternalInference(input, ocrFields);
+    const headers = {
+      Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
+      "Content-Type": "image/jpeg"
+    };
+    let response = await fetch(HF_PRIMARY_ENDPOINT, {
+      method: "POST",
+      headers,
+      body: sanitizedBytes,
+      signal: controller.signal
+    });
+    if (!response.ok && (response.status === 404 || response.status === 502 || response.status === 503)) {
+      try {
+        response = await fetch(HF_FALLBACK_ENDPOINT, {
+          method: "POST",
+          headers,
+          body: sanitizedBytes,
+          signal: controller.signal
+        });
+      } catch {
+      }
+    }
+    if (!response.ok) {
+      return buildCheck(
+        "not_applicable",
+        0,
+        `Hugging Face returned ${response.status}; the AI-image signal was excluded from this report.`
+      );
+    }
+    const payload = await response.json();
+    if (!Array.isArray(payload)) {
+      return buildCheck(
+        "not_applicable",
+        0,
+        "Hugging Face returned an unexpected response format; signal was excluded from scoring."
+      );
+    }
+    const aiLabel = payload.find((item) => /art|ai|generated|fake/i.test(item.label ?? ""));
+    const aiProbability = Math.round((aiLabel?.score ?? 0) * 100);
+    const confidence = Math.max(0, Math.min(100, 100 - aiProbability));
+    if (aiProbability > 70) {
+      return buildCheck(
+        "flag",
+        confidence,
+        `The optional SDXL detector returned a high AI-generation likelihood (${aiProbability}%). This is not proof of document editing.`
+      );
+    }
+    return buildCheck(
+      "pass",
+      confidence,
+      `The optional SDXL detector returned a low AI-generation likelihood (${aiProbability}%). Its model card warns performance varies by generator family.`
+    );
+  } catch {
+    return buildCheck(
+      "not_applicable",
+      0,
+      "Hugging Face inference could not be completed within the request window; the signal was excluded rather than guessed."
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+var HF_PRIMARY_ENDPOINT, HF_FALLBACK_ENDPOINT;
+var init_aiDetector = __esm({
+  "server/services/aiDetector.ts"() {
+    "use strict";
+    HF_PRIMARY_ENDPOINT = "https://router.huggingface.co/hf-inference/models/Organika/sdxl-detector";
+    HF_FALLBACK_ENDPOINT = "https://api-inference.huggingface.co/models/Organika/sdxl-detector";
+  }
+});
+
 // server/services/fusion.ts
 function isModuleOfflineOrUninitialized(c) {
   if (!c) return true;
@@ -46,6 +196,8 @@ function fuseForensicChecks(checks2) {
       c.result = "not_applicable";
       c.confidence = 0;
       c.available = false;
+      c.weight = 0;
+      c.effectiveWeight = 0;
       unconfiguredModules.push(c.checkName);
       const isNeural = c.category === "neural_models" || /trufor|catnet|huggingface|sdxl|ai_generated|deepfake|pixel_worker|ocr_typography/i.test(
         c.checkName + " " + (c.provider || "")
@@ -53,6 +205,10 @@ function fuseForensicChecks(checks2) {
       if (isNeural) {
         dormantNeuralChecks.push(c.checkName);
       }
+    } else {
+      const w = MODULE_WEIGHTS[c.checkName] ?? 1;
+      c.weight = w;
+      c.effectiveWeight = w;
     }
   }
   const active = checks2.filter((item) => item.result !== "not_applicable");
@@ -129,7 +285,7 @@ function fuseForensicChecks(checks2) {
   }
   if (isTierAFailed) {
     penaltiesApplied += 80;
-    score = Math.min(score, 20);
+    score = Math.min(25, Math.max(15, score <= 25 ? score < 15 ? 15 : score : 20));
   }
   const status = score > 80 ? "verified" : score >= 40 ? "needs_review" : "likely_forged";
   return {
@@ -146,10 +302,22 @@ function fuseForensicChecks(checks2) {
     activeModulesCount: active.length
   };
 }
-var DETERMINISTIC_TIER_A_CHECKS;
+var MODULE_WEIGHTS, DETERMINISTIC_TIER_A_CHECKS;
 var init_fusion = __esm({
   "server/services/fusion.ts"() {
     "use strict";
+    MODULE_WEIGHTS = {
+      checksum_identifier_validation: 3.5,
+      qr_signature_verification: 3.5,
+      copy_move_clone_detection: 1.8,
+      trufor_inference: 1.8,
+      catnet_inference: 1.8,
+      ocr_typography_consistency: 1.5,
+      screenshot_capture_detection: 1.2,
+      ela_compression_analysis: 1,
+      ai_generated_image_detector: 1,
+      metadata_exif_inspection: 1
+    };
     DETERMINISTIC_TIER_A_CHECKS = /* @__PURE__ */ new Set([
       "checksum_identifier_validation",
       "qr_signature_verification"
@@ -161,9 +329,11 @@ var init_fusion = __esm({
 var forensics_exports = {};
 __export(forensics_exports, {
   analyzeCompressionAndEla: () => analyzeCompressionAndEla,
+  detectAiGeneratedImage: () => detectAiGeneratedImage,
   detectCopyMoveAndScreenshot: () => detectCopyMoveAndScreenshot,
   fuseForensicChecks: () => fuseForensicChecks,
   inspectMetadata: () => inspectMetadata,
+  isHuggingFaceConfigured: () => isHuggingFaceConfigured,
   probeConfiguredServiceHealth: () => probeConfiguredServiceHealth,
   runForensicAnalysis: () => runForensicAnalysis,
   typographyConsistency: () => typographyConsistency,
@@ -171,9 +341,9 @@ __export(forensics_exports, {
   verifyQrOrBarcode: () => verifyQrOrBarcode
 });
 import exifr from "exifr";
-import jpeg from "jpeg-js";
+import jpeg2 from "jpeg-js";
 import jsQR from "jsqr";
-import { PNG } from "pngjs";
+import { PNG as PNG2 } from "pngjs";
 function check(checkName, result, confidence, explanation, provider, flaggedRegion) {
   return { checkName, result, confidence, explanation, provider, available: result !== "not_applicable", ...flaggedRegion ? { flaggedRegion } : {} };
 }
@@ -246,11 +416,11 @@ function decodeImage(input) {
   if (!input.content || !/^image\//.test(input.mimeType)) return null;
   try {
     if (input.mimeType === "image/jpeg") {
-      const decoded = jpeg.decode(input.content, { useTArray: true });
+      const decoded = jpeg2.decode(input.content, { useTArray: true });
       return { width: decoded.width, height: decoded.height, data: new Uint8ClampedArray(decoded.data) };
     }
     if (input.mimeType === "image/png") {
-      const decoded = PNG.sync.read(input.content);
+      const decoded = PNG2.sync.read(input.content);
       return { width: decoded.width, height: decoded.height, data: new Uint8ClampedArray(decoded.data) };
     }
   } catch {
@@ -264,8 +434,8 @@ function luminance(data, index) {
 function analyzeCompressionAndEla(input) {
   const image = decodeImage(input);
   if (!image) return check("ela_compression_analysis", "not_applicable", 0, "ELA requires a decodable JPEG or PNG image; PDFs require rasterization in an image-analysis worker.", "local");
-  const recompressed = jpeg.encode({ data: Buffer.from(image.data), width: image.width, height: image.height }, 90).data;
-  const recompressedImage = jpeg.decode(recompressed, { useTArray: true });
+  const recompressed = jpeg2.encode({ data: Buffer.from(image.data), width: image.width, height: image.height }, 90).data;
+  const recompressedImage = jpeg2.decode(recompressed, { useTArray: true });
   const pixels = Math.min(image.width * image.height, recompressedImage.width * recompressedImage.height);
   let totalDifference = 0;
   for (let pixel = 0; pixel < pixels; pixel += 1) {
@@ -338,56 +508,8 @@ async function typographyConsistency(input) {
     return check("ocr_typography_consistency", "not_applicable", 0, "OCR typography inference was unavailable; the signal was excluded rather than guessed.", "ocr");
   }
 }
-async function redactPiiForExternalInference(input, ocrFields = {}) {
-  if (!input.content || !/^image\//.test(input.mimeType)) return input.content || Buffer.alloc(0);
-  const decoded = decodeImage(input);
-  if (!decoded) return input.content;
-  const startY = Math.floor(decoded.height * 0.35);
-  const endY = Math.floor(decoded.height * 0.78);
-  const startX = Math.floor(decoded.width * 0.12);
-  const endX = Math.floor(decoded.width * 0.88);
-  for (let y = startY; y < endY; y++) {
-    for (let x = startX; x < endX; x++) {
-      const idx = (y * decoded.width + x) * 4;
-      decoded.data[idx] = 18;
-      decoded.data[idx + 1] = 18;
-      decoded.data[idx + 2] = 18;
-    }
-  }
-  try {
-    const encoded = jpeg.encode({ data: Buffer.from(decoded.data), width: decoded.width, height: decoded.height }, 85);
-    return encoded.data;
-  } catch {
-    return input.content;
-  }
-}
 async function callHuggingFace(input, ocrFields = {}) {
-  if (!input.content || !/^image\//.test(input.mimeType)) return check("ai_generated_image_detector", "not_applicable", 0, "AI-image detection is only applicable to image uploads, not PDF bytes.", "huggingface");
-  if (!process.env.HF_API_TOKEN) return check("ai_generated_image_detector", "not_applicable", 0, "Hugging Face inference is not configured. Add HF_API_TOKEN to enable this optional signal.", "huggingface");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12e3);
-  try {
-    const sanitizedBytes = await redactPiiForExternalInference(input, ocrFields);
-    const response = await fetch("https://router.huggingface.co/hf-inference/models/Organika/sdxl-detector", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
-        "Content-Type": "image/jpeg"
-      },
-      body: sanitizedBytes,
-      signal: controller.signal
-    });
-    if (!response.ok) return check("ai_generated_image_detector", "not_applicable", 0, `Hugging Face returned ${response.status}; the AI-image signal was excluded from this report.`, "huggingface");
-    const payload = await response.json();
-    const aiLabel = payload.find((item) => /art|ai|generated|fake/i.test(item.label ?? ""));
-    const aiProbability = Math.round((aiLabel?.score ?? 0) * 100);
-    const confidence = 100 - aiProbability;
-    return check("ai_generated_image_detector", aiProbability > 70 ? "flag" : "pass", confidence, aiProbability > 70 ? `The optional SDXL detector returned a high AI-generation likelihood (${aiProbability}%). This is not proof of document editing.` : `The optional SDXL detector returned a low AI-generation likelihood (${aiProbability}%). Its model card warns performance varies by generator family.`, "huggingface");
-  } catch {
-    return check("ai_generated_image_detector", "not_applicable", 0, "Hugging Face inference could not be completed within the request window; the signal was excluded rather than guessed.", "huggingface");
-  } finally {
-    clearTimeout(timeout);
-  }
+  return detectAiGeneratedImage(input, ocrFields);
 }
 async function callExternalPixelAdapter(input) {
   const url = process.env.PIXEL_ANALYSIS_API_URL;
@@ -553,6 +675,7 @@ var editingSoftware, allowedMimeTypes, verhoeffMultiplication, verhoeffPermutati
 var init_forensics = __esm({
   "server/forensics.ts"() {
     "use strict";
+    init_aiDetector();
     init_fusion();
     editingSoftware = /(photoshop|gimp|canva|illustrator|affinity|pixelmator|after effects)/i;
     allowedMimeTypes = /* @__PURE__ */ new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);

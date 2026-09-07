@@ -194,6 +194,8 @@ export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult
       c.result = "not_applicable";
       c.confidence = 0;
       c.available = false;
+      (c as any).weight = 0.0;
+      (c as any).effectiveWeight = 0.0;
       unconfiguredModules.push(c.checkName);
 
       const isNeural =
@@ -204,6 +206,10 @@ export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult
       if (isNeural) {
         dormantNeuralChecks.push(c.checkName);
       }
+    } else {
+      const w = MODULE_WEIGHTS[c.checkName] ?? 1.0;
+      (c as any).weight = w;
+      (c as any).effectiveWeight = w;
     }
   }
 
@@ -325,10 +331,11 @@ export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult
   }
 
   // 5. Apply Tier A Hard Override (Deterministic Failures & High-Confidence Tamper Localization)
-  // Forcibly overrides final score to a hard ceiling between 15 and 25 ("Likely Forged")
+  // Strict Tier-A Veto Override: Deterministic checksum or QR failures must immediately force
+  // the confidence score down into the 15–25 range ("Likely Forged").
   if (isTierAFailed) {
     penaltiesApplied += 80;
-    score = Math.min(score, 20); // Hard ceiling at 20 (between 15 and 25)
+    score = Math.min(25, Math.max(15, score <= 25 ? (score < 15 ? 15 : score) : 20));
   }
 
   // 6. Final Verdict Mapping

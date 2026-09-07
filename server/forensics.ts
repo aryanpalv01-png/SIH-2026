@@ -236,31 +236,13 @@ async function redactPiiForExternalInference(input: ForensicInput, ocrFields: Re
   }
 }
 
+import { detectAiGeneratedImage, isHuggingFaceConfigured } from "./services/aiDetector";
+export { detectAiGeneratedImage, isHuggingFaceConfigured };
+
 async function callHuggingFace(input: ForensicInput, ocrFields: Record<string, string> = {}): Promise<ForensicModuleResult> {
-  if (!input.content || !/^image\//.test(input.mimeType)) return check("ai_generated_image_detector", "not_applicable", 0, "AI-image detection is only applicable to image uploads, not PDF bytes.", "huggingface");
-  if (!process.env.HF_API_TOKEN) return check("ai_generated_image_detector", "not_applicable", 0, "Hugging Face inference is not configured. Add HF_API_TOKEN to enable this optional signal.", "huggingface");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12_000);
-  try {
-    // Dynamic PII Redaction: mask out names, identifiers, and sensitive text regions before sending to external API
-    const sanitizedBytes = await redactPiiForExternalInference(input, ocrFields);
-    const response = await fetch("https://router.huggingface.co/hf-inference/models/Organika/sdxl-detector", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
-        "Content-Type": "image/jpeg",
-      },
-      body: sanitizedBytes as unknown as BodyInit,
-      signal: controller.signal,
-    });
-    if (!response.ok) return check("ai_generated_image_detector", "not_applicable", 0, `Hugging Face returned ${response.status}; the AI-image signal was excluded from this report.`, "huggingface");
-    const payload = await response.json() as Array<{ label?: string; score?: number }>;
-    const aiLabel = payload.find((item) => /art|ai|generated|fake/i.test(item.label ?? ""));
-    const aiProbability = Math.round((aiLabel?.score ?? 0) * 100);
-    const confidence = 100 - aiProbability;
-    return check("ai_generated_image_detector", aiProbability > 70 ? "flag" : "pass", confidence, aiProbability > 70 ? `The optional SDXL detector returned a high AI-generation likelihood (${aiProbability}%). This is not proof of document editing.` : `The optional SDXL detector returned a low AI-generation likelihood (${aiProbability}%). Its model card warns performance varies by generator family.`, "huggingface");
-  } catch { return check("ai_generated_image_detector", "not_applicable", 0, "Hugging Face inference could not be completed within the request window; the signal was excluded rather than guessed.", "huggingface"); } finally { clearTimeout(timeout); }
+  return detectAiGeneratedImage(input, ocrFields);
 }
+
 
 async function callExternalPixelAdapter(input: ForensicInput): Promise<ForensicModuleResult[]> {
   const url = process.env.PIXEL_ANALYSIS_API_URL;

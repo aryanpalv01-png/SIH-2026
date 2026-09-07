@@ -184,9 +184,9 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
         if "minor" in expl or "potential" in expl:
             final_score = max(85, final_score)
 
-    # Hard Tier A Overrides: cap at hard ceiling between 15 and 25
+    # Hard Tier A Overrides: strictly clamp final score into 15 to 25 range ("Likely Forged")
     if has_hard_fail:
-        final_score = min(final_score, 20)
+        final_score = min(25, max(15, final_score if final_score <= 25 else 20))
 
     # Thresholds: >80 Verified, 40-80 Needs Review, <40 Likely Forged
     if final_score > 80:
