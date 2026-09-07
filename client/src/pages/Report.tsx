@@ -151,6 +151,24 @@ export default function Report() {
     );
   }, [document.checks, categoryFilter, flagged, passed]);
 
+  const dormantNeuralChecks = useMemo(() => {
+    return document.checks.filter((c) => {
+      const isNeuralOrExternal =
+        getCheckCategory(c) === "neural_models" ||
+        /trufor|catnet|cat-net|huggingface|sdxl|ai_generated|deepfake|pixel_worker|ocr_typography/i.test(
+          c.id + " " + c.name + " " + (c.provider || "")
+        );
+      const isDormant =
+        c.result === "not_applicable" ||
+        c.providerState === "not_configured" ||
+        (document.providerHealth && c.provider && document.providerHealth[c.provider] === "not_configured") ||
+        /not configured|missing|offline|503|501|uninitialized|no third-party|dormant|is not configured/i.test(
+          c.explanation
+        );
+      return isNeuralOrExternal && isDormant;
+    });
+  }, [document.checks, document.providerHealth]);
+
   return (
     <div className="mx-auto max-w-[1440px] space-y-4 py-3 sm:py-4 px-2 sm:px-4">
       {/* Top Navigation & Operational Actions Bar */}
@@ -202,6 +220,37 @@ export default function Report() {
             currentStageIndex={8}
             documentScore={document.score}
           />
+        </div>
+      )}
+
+      {/* Institutional Dormant Neural Modules Warning Advisory */}
+      {dormantNeuralChecks.length > 0 && (
+        <div className="border border-amber-500/50 bg-[#1E1B14] p-4 font-mono text-xs text-amber-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-[#FF9933] shrink-0 mt-0.5" />
+            <div className="space-y-1.5 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-bold text-[#FAF7F0] text-xs uppercase tracking-normal flex items-center gap-2">
+                  Institutional Advisory: Secondary Neural Checks in Dormant / Fallback Mode
+                  <span className="command-badge bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/40 text-[9px] font-bold">
+                    WEIGHT: 0.0 (EXCLUDED)
+                  </span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  ACTIVE PIPELINES: {passed.length + flagged.length} RUNNING
+                </span>
+              </div>
+              <p className="text-[11.5px] text-slate-300 leading-relaxed font-sans">
+                The following external or neural inference models are unconfigured or offline (missing local GPU weights / API credentials):{" "}
+                <strong className="text-[#FF9933] font-mono">
+                  {dormantNeuralChecks.map((c) => c.shortName || c.name || c.id).join(", ")}
+                </strong>.
+              </p>
+              <p className="text-[10.5px] text-slate-400 leading-relaxed font-mono border-t border-[#3A3D45]/60 pt-1.5">
+                Under Government of India evidentiary protocols, unconfigured modules are assigned a weight of 0 and excluded from the scoring denominator to prevent artificial neutral score dilution. The Tamper Confidence Score ({document.score}/100) is calculated strictly based on active modules that successfully executed.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -470,13 +519,13 @@ export default function Report() {
                           </span>
                         ) : (
                           <span className="command-badge bg-[#1C1E22] text-slate-400 border-[#3A3D45] text-[10px]">
-                            N/A
+                            N/A (Weight 0)
                           </span>
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-bold text-white whitespace-nowrap">
                         {check.result === "not_applicable" ? (
-                          <span className="text-slate-500 font-normal">--</span>
+                          <span className="text-slate-500 font-normal">-- (0.0)</span>
                         ) : (
                           `${check.confidence}%`
                         )}
@@ -500,11 +549,11 @@ export default function Report() {
                   Flagged: <strong className="text-rose-400">{flagged.length}</strong>
                 </span>
                 <span>
-                  Not Applicable: <strong className="text-white">{notApplicable.length}</strong>
+                  Not Applicable (Weight 0): <strong className="text-white">{notApplicable.length}</strong>
                 </span>
               </div>
               <span className="text-[11px] text-slate-400">
-                Total Checks: {document.checks.length}
+                Active Checks: {passed.length + flagged.length} / {document.checks.length}
               </span>
             </div>
           </div>

@@ -17,6 +17,9 @@ export interface FusionResult {
   tierBFailures: string[];
   rawScore: number;
   penaltiesApplied: number;
+  unconfiguredModules: string[];
+  dormantNeuralChecks: string[];
+  activeModulesCount: number;
 }
 
 const MODULE_WEIGHTS: Record<string, number> = {
@@ -71,9 +74,10 @@ export function isModuleOfflineOrUninitialized(c: any): boolean {
   if (!c) return true;
   if (c.result === "not_applicable" || c.available === false) return true;
   if (c.result === "error") return true;
+  if (c.providerState === "not_configured" || c.provider === "not_configured") return true;
   if (c.confidence === null || c.confidence === undefined || Number.isNaN(Number(c.confidence))) return true;
   if (c.status === 503 || c.status === 501 || c.statusCode === 503 || c.statusCode === 501) return true;
-  if (c.error || c.uninitialized || c.missingWeights || c.offline) return true;
+  if (c.error || c.uninitialized || c.missingWeights || c.offline || c.notConfigured) return true;
 
   const expl = typeof c.explanation === "string" ? c.explanation.toLowerCase() : "";
   const isOfflineMention =
@@ -88,16 +92,32 @@ export function isModuleOfflineOrUninitialized(c: any): boolean {
     expl.includes("service unavailable") ||
     expl.includes("offline") ||
     expl.includes("not configured") ||
+    expl.includes("is not configured") ||
+    expl.includes("missing api key") ||
+    expl.includes("no third-party api key") ||
+    expl.includes("add hf_api_token") ||
+    expl.includes("must be exposed") ||
+    expl.includes("no self-hosted") ||
     expl.includes("excluded from scoring") ||
     expl.includes("signal was excluded") ||
     expl.includes("could not be completed") ||
     expl.includes("neutral score") ||
     expl.includes("neutral fallback") ||
-    expl.includes("fallback to neutral");
+    expl.includes("fallback to neutral") ||
+    expl.includes("dormant");
 
   if (isOfflineMention) return true;
 
   return false;
+}
+
+/**
+ * Returns the effective weight of a module.
+ * If a module is not applicable or unconfigured, its weight is STRICTLY 0.0.
+ */
+export function getEffectiveModuleWeight(checkName: string, result: string): number {
+  if (result === "not_applicable") return 0;
+  return MODULE_WEIGHTS[checkName] ?? 1.0;
 }
 
 /**
@@ -163,14 +183,27 @@ export function isTierAFailure(c: ForensicModuleResult): boolean {
  */
 export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult {
   // 0. Handle Offline/Uninitialized Models:
-  // If forensic modules return errors, 503, 501, or null values due to missing local weights,
-  // explicitly assign them a status of "not_applicable" with zero weight and zero penalty.
-  // Do NOT fall back to a neutral score of 50.
+  // If forensic modules return errors, 503, 501, or null values due to missing local weights or API keys,
+  // explicitly assign them a status of "not_applicable" with zero weight (weight = 0.0) and zero penalty.
+  // They are completely excluded from the weighted denominator and NEVER inject neutral scores (50 or 70).
+  const unconfiguredModules: string[] = [];
+  const dormantNeuralChecks: string[] = [];
+
   for (const c of checks) {
     if (isModuleOfflineOrUninitialized(c)) {
       c.result = "not_applicable";
       c.confidence = 0;
       c.available = false;
+      unconfiguredModules.push(c.checkName);
+
+      const isNeural =
+        (c as any).category === "neural_models" ||
+        /trufor|catnet|huggingface|sdxl|ai_generated|deepfake|pixel_worker|ocr_typography/i.test(
+          c.checkName + " " + (c.provider || "")
+        );
+      if (isNeural) {
+        dormantNeuralChecks.push(c.checkName);
+      }
     }
   }
 
@@ -185,6 +218,9 @@ export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult
       tierBFailures: [],
       rawScore: 50,
       penaltiesApplied: 0,
+      unconfiguredModules,
+      dormantNeuralChecks,
+      activeModulesCount: 0,
     };
   }
 
@@ -311,5 +347,8 @@ export function fuseForensicChecks(checks: ForensicModuleResult[]): FusionResult
     tierBFailures,
     rawScore,
     penaltiesApplied,
+    unconfiguredModules,
+    dormantNeuralChecks,
+    activeModulesCount: active.length,
   };
 }

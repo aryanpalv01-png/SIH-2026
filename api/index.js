@@ -13,11 +13,12 @@ function isModuleOfflineOrUninitialized(c) {
   if (!c) return true;
   if (c.result === "not_applicable" || c.available === false) return true;
   if (c.result === "error") return true;
+  if (c.providerState === "not_configured" || c.provider === "not_configured") return true;
   if (c.confidence === null || c.confidence === void 0 || Number.isNaN(Number(c.confidence))) return true;
   if (c.status === 503 || c.status === 501 || c.statusCode === 503 || c.statusCode === 501) return true;
-  if (c.error || c.uninitialized || c.missingWeights || c.offline) return true;
+  if (c.error || c.uninitialized || c.missingWeights || c.offline || c.notConfigured) return true;
   const expl = typeof c.explanation === "string" ? c.explanation.toLowerCase() : "";
-  const isOfflineMention = expl.includes("503") || expl.includes("501") || expl.includes("missing weight") || expl.includes("weights missing") || expl.includes("missing local weight") || expl.includes("checkpoint is not configured") || expl.includes("missing checkpoint") || expl.includes("uninitialized") || expl.includes("service unavailable") || expl.includes("offline") || expl.includes("not configured") || expl.includes("excluded from scoring") || expl.includes("signal was excluded") || expl.includes("could not be completed") || expl.includes("neutral score") || expl.includes("neutral fallback") || expl.includes("fallback to neutral");
+  const isOfflineMention = expl.includes("503") || expl.includes("501") || expl.includes("missing weight") || expl.includes("weights missing") || expl.includes("missing local weight") || expl.includes("checkpoint is not configured") || expl.includes("missing checkpoint") || expl.includes("uninitialized") || expl.includes("service unavailable") || expl.includes("offline") || expl.includes("not configured") || expl.includes("is not configured") || expl.includes("missing api key") || expl.includes("no third-party api key") || expl.includes("add hf_api_token") || expl.includes("must be exposed") || expl.includes("no self-hosted") || expl.includes("excluded from scoring") || expl.includes("signal was excluded") || expl.includes("could not be completed") || expl.includes("neutral score") || expl.includes("neutral fallback") || expl.includes("fallback to neutral") || expl.includes("dormant");
   if (isOfflineMention) return true;
   return false;
 }
@@ -38,11 +39,20 @@ function isTierAFailure(c) {
   return false;
 }
 function fuseForensicChecks(checks2) {
+  const unconfiguredModules = [];
+  const dormantNeuralChecks = [];
   for (const c of checks2) {
     if (isModuleOfflineOrUninitialized(c)) {
       c.result = "not_applicable";
       c.confidence = 0;
       c.available = false;
+      unconfiguredModules.push(c.checkName);
+      const isNeural = c.category === "neural_models" || /trufor|catnet|huggingface|sdxl|ai_generated|deepfake|pixel_worker|ocr_typography/i.test(
+        c.checkName + " " + (c.provider || "")
+      );
+      if (isNeural) {
+        dormantNeuralChecks.push(c.checkName);
+      }
     }
   }
   const active = checks2.filter((item) => item.result !== "not_applicable");
@@ -55,7 +65,10 @@ function fuseForensicChecks(checks2) {
       tierAFailures: [],
       tierBFailures: [],
       rawScore: 50,
-      penaltiesApplied: 0
+      penaltiesApplied: 0,
+      unconfiguredModules,
+      dormantNeuralChecks,
+      activeModulesCount: 0
     };
   }
   const tierAFailures = [];
@@ -127,7 +140,10 @@ function fuseForensicChecks(checks2) {
     tierAFailures,
     tierBFailures,
     rawScore,
-    penaltiesApplied
+    penaltiesApplied,
+    unconfiguredModules,
+    dormantNeuralChecks,
+    activeModulesCount: active.length
   };
 }
 var DETERMINISTIC_TIER_A_CHECKS;

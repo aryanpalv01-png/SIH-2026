@@ -46,6 +46,9 @@ export type VerificationDocument = {
   providerHealth?: Record<string, "healthy" | "not_configured" | "not_applicable" | "degraded">;
   extractedFields?: Record<string, string>;
   comparisonFindings?: string[];
+  unconfiguredModules?: string[];
+  dormantNeuralChecks?: string[];
+  activeModulesCount?: number;
 };
 
 export const scanStages = [

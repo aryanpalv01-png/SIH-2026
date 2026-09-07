@@ -15,7 +15,18 @@ export type ForensicInput = {
 
 export type ForensicProvider = "local" | "huggingface" | "trufor" | "catnet" | "ocr" | "pixel";
 export type ForensicModuleResult = AnalysisCheck & { provider: ForensicProvider; available: boolean };
-export type ForensicAnalysis = { score: number; status: "verified" | "needs_review" | "likely_forged"; checks: ForensicModuleResult[]; providers: Record<string, "active" | "not_configured" | "not_applicable" | "error">; providerHealth: Record<string, "healthy" | "not_configured" | "not_applicable" | "degraded">; extractedFields: Record<string, string>; comparisonFindings: string[] };
+export type ForensicAnalysis = {
+  score: number;
+  status: "verified" | "needs_review" | "likely_forged";
+  checks: ForensicModuleResult[];
+  providers: Record<string, "active" | "not_configured" | "not_applicable" | "error">;
+  providerHealth: Record<string, "healthy" | "not_configured" | "not_applicable" | "degraded">;
+  extractedFields: Record<string, string>;
+  comparisonFindings: string[];
+  unconfiguredModules?: string[];
+  dormantNeuralChecks?: string[];
+  activeModulesCount?: number;
+};
 
 const editingSoftware = /(photoshop|gimp|canva|illustrator|affinity|pixelmator|after effects)/i;
 const allowedMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);

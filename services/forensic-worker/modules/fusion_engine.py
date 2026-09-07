@@ -18,13 +18,27 @@ CHECK_WEIGHTS: dict[str, float] = {
 DETERMINISTIC_CHECKS = {"checksum_validation", "qr_signature_verification"}
 
 
+NEURAL_MODULE_CHECKS = {
+    "trufor_inference",
+    "catnet_inference",
+    "ai_generated_image_detector",
+    "pixel_clone_worker",
+    "copy_move_clone_detection",
+    "ocr_typography_consistency",
+}
+
+
 def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
-    # Normalize offline, uninitialized, 503/501, or null-value checks to not_applicable
+    # Normalize offline, uninitialized, 503/501, or null-value checks to not_applicable with 0.0 weight
+    unconfigured_modules: list[str] = []
+    dormant_neural_checks: list[str] = []
+
     for c in checks:
         result = c.get("result")
         conf = c.get("confidence")
         expl = str(c.get("explanation", "")).lower()
         status_code = c.get("status")
+        check_name = c.get("checkName", "")
 
         is_offline = (
             result in ("not_applicable", "error")
@@ -34,16 +48,35 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
             or "501" in expl
             or "missing weight" in expl
             or "weights missing" in expl
+            or "missing local weight" in expl
+            or "checkpoint is not configured" in expl
+            or "missing checkpoint" in expl
             or "not configured" in expl
             or "uninitialized" in expl
             or "offline" in expl
+            or "missing api key" in expl
+            or "add hf_api_token" in expl
+            or "no third-party api key" in expl
             or "neutral score" in expl
+            or "neutral fallback" in expl
             or "fallback to neutral" in expl
+            or "dormant" in expl
+            or c.get("providerState") == "not_configured"
+            or c.get("available") is False
         )
         if is_offline:
             c["result"] = "not_applicable"
             c["confidence"] = 0
             c["available"] = False
+            c["weight"] = 0.0
+            c["effective_weight"] = 0.0
+            unconfigured_modules.append(check_name)
+            if check_name in NEURAL_MODULE_CHECKS or "neural" in expl or "weights" in expl:
+                dormant_neural_checks.append(check_name)
+        else:
+            w = CHECK_WEIGHTS.get(check_name, 1.0)
+            c["weight"] = w
+            c["effective_weight"] = w
 
     active_checks = [c for c in checks if c.get("result") != "not_applicable"]
 
@@ -59,6 +92,9 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
             "passed_count": 0,
             "total_active_checks": 0,
             "not_applicable_checks": [c.get("checkName") for c in checks if c.get("result") == "not_applicable"],
+            "unconfigured_modules": unconfigured_modules,
+            "dormant_neural_checks": dormant_neural_checks,
+            "active_modules_count": 0,
             "checks": checks,
         }
 
@@ -196,5 +232,8 @@ def fuse_scores(checks: list[dict[str, Any]]) -> dict[str, Any]:
         "passed_count": len(passed),
         "total_active_checks": len(active_checks),
         "not_applicable_checks": na_list,
+        "unconfigured_modules": unconfigured_modules,
+        "dormant_neural_checks": dormant_neural_checks,
+        "active_modules_count": len(active_checks),
         "checks": checks,
     }

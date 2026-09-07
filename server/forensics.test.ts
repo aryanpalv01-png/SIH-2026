@@ -251,4 +251,40 @@ describe("forensic module contracts", () => {
     expect(flawedResult.tierBCumulativePenalty).toBe(true);
     expect(flawedResult.penaltiesApplied).toBeGreaterThanOrEqual(60);
   });
+
+  it("assigns weight 0 to unconfigured/N/A modules, excludes them from scoring, and tracks dormant neural checks", () => {
+    const checks = [
+      { checkName: "checksum_identifier_validation", result: "pass" as const, confidence: 98, explanation: "Verhoeff algorithm verified authentic", provider: "local" as const, available: true },
+      { checkName: "qr_signature_verification", result: "pass" as const, confidence: 96, explanation: "UIDAI signature verified", provider: "local" as const, available: true },
+      { checkName: "metadata_exif_inspection", result: "pass" as const, confidence: 92, explanation: "Camera EXIF intact", provider: "local" as const, available: true },
+      { checkName: "trufor_inference", result: "error" as const, confidence: 50, explanation: "503 Service Unavailable: missing local weights checkpoint", provider: "trufor" as const, available: false },
+      { checkName: "catnet_inference", result: "not_applicable" as const, confidence: 0, explanation: "CAT-Net weights not configured", provider: "catnet" as const, available: false },
+      { checkName: "ai_generated_image_detector", result: "not_applicable" as const, confidence: 0, explanation: "Missing API key: Add HF_API_TOKEN to environment", provider: "huggingface" as const, available: false },
+    ];
+
+    const result = fuseForensicChecks(checks);
+
+    // 1. Score must be calculated strictly from active modules that successfully ran
+    // Must NOT be pulled toward neutral middle ground (50 or 70)
+    expect(result.score).toBeGreaterThanOrEqual(95);
+    expect(result.status).toBe("verified");
+    expect(result.activeModulesCount).toBe(3);
+
+    // 2. Unconfigured modules must be tracked
+    expect(result.unconfiguredModules).toContain("trufor_inference");
+    expect(result.unconfiguredModules).toContain("catnet_inference");
+    expect(result.unconfiguredModules).toContain("ai_generated_image_detector");
+
+    // 3. Dormant neural checks must be identified for the institutional warning UI
+    expect(result.dormantNeuralChecks).toContain("trufor_inference");
+    expect(result.dormantNeuralChecks).toContain("catnet_inference");
+    expect(result.dormantNeuralChecks).toContain("ai_generated_image_detector");
+
+    // 4. In checks array, unconfigured modules are set to not_applicable with confidence 0
+    const trufor = checks.find(c => c.checkName === "trufor_inference");
+    expect(trufor?.result).toBe("not_applicable");
+    expect(trufor?.confidence).toBe(0);
+    expect(trufor?.available).toBe(false);
+  });
 });
+
