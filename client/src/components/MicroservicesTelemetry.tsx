@@ -124,7 +124,7 @@ export function MicroservicesTelemetry({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3A3D45] pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center border border-[#3A3D45] bg-[#1C1E22] text-[#8A6D1F]">
+          <div className="flex h-8 w-8 items-center justify-center border border-[#3A3D45] bg-[#1C1E22] text-[#FF9933]">
             <Activity className="h-4 w-4" />
           </div>
           <div>
@@ -132,7 +132,7 @@ export function MicroservicesTelemetry({
               <h3 className="font-serif text-sm font-bold text-[#FAF7F0]">
                 Microservices Distributed Architecture Telemetry
               </h3>
-              <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40">
+              <span className="command-badge bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/40">
                 LIVE MESH
               </span>
             </div>
@@ -143,8 +143,8 @@ export function MicroservicesTelemetry({
         </div>
 
         <div className="flex items-center gap-2 font-mono text-xs text-[#A09D95]">
-          <span>TOPOLOGY_STATUS:</span>
-          <span className="command-badge bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30 flex items-center gap-1">
+          <span>TOPOLOGY STATUS:</span>
+          <span className="command-badge bg-[#138808]/15 text-[#22C55E] border-[#138808]/40 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" /> ALL 9 NODES NOMINAL
           </span>
         </div>
@@ -162,10 +162,10 @@ export function MicroservicesTelemetry({
               onClick={() => setSelectedNode(isSelected ? null : node.id)}
               className={`group relative border p-3 transition-all cursor-pointer ${
                 isSelected
-                  ? "border-[#8A6D1F] bg-[#8A6D1F]/15"
+                  ? "border-[#FF9933] bg-[#FF9933]/10"
                   : isPulsing
-                  ? "border-[#8A6D1F]/70 bg-[#1C1E22]"
-                  : "border-[#3A3D45] bg-[#1C1E22] hover:border-[#8A6D1F]/50"
+                  ? "border-[#FF9933]/70 bg-[#1C1E22]"
+                  : "border-[#3A3D45] bg-[#1C1E22] hover:border-[#FF9933]/50"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -173,14 +173,14 @@ export function MicroservicesTelemetry({
                   <div
                     className={`flex h-7 w-7 items-center justify-center border transition-colors ${
                       isPulsing || isSelected
-                        ? "border-[#8A6D1F] bg-[#8A6D1F]/20 text-[#D1CEC7]"
+                        ? "border-[#FF9933] bg-[#FF9933]/20 text-[#FAF7F0]"
                         : "border-[#3A3D45] bg-[#26282D] text-[#A09D95]"
                     }`}
                   >
                     {node.icon}
                   </div>
                   <div>
-                    <p className="font-mono text-[9.5px] font-bold text-[#A09D95] uppercase tracking-wider">
+                    <p className="font-mono text-[9.5px] font-bold text-[#A09D95] uppercase">
                       {node.category}
                     </p>
                     <h4 className="font-mono text-xs font-bold text-[#FAF7F0] leading-tight">
@@ -189,7 +189,7 @@ export function MicroservicesTelemetry({
                   </div>
                 </div>
 
-                <span className="font-mono text-[10px] text-[#8A6D1F] bg-[#26282D] px-1.5 py-0.5 border border-[#3A3D45]">
+                <span className="font-mono text-[10px] text-[#FF9933] bg-[#26282D] px-1.5 py-0.5 border border-[#3A3D45]">
                   {node.latency}
                 </span>
               </div>
@@ -203,13 +203,13 @@ export function MicroservicesTelemetry({
                 <span className="flex items-center gap-1.5 text-[#A09D95]">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      isPulsing ? "bg-[#8A6D1F] animate-pulse" : "bg-[#22C55E]"
+                      isPulsing ? "bg-[#FF9933] animate-pulse" : "bg-[#138808]"
                     }`}
                   />
                   {node.status.toUpperCase()}
                 </span>
-                <span className="text-[9px] text-[#8A6D1F] uppercase tracking-widest font-semibold group-hover:underline">
-                  [INSPECT]
+                <span className="text-[10px] text-[#FF9933] font-semibold group-hover:underline">
+                  Inspect
                 </span>
               </div>
             </div>
@@ -219,7 +219,7 @@ export function MicroservicesTelemetry({
 
       {/* Selected Node Expanded Detail Drawer */}
       {selectedNode && (
-        <div className="mt-3 border border-[#8A6D1F] bg-[#1C1E22] p-3.5 text-xs">
+        <div className="mt-3 border border-[#FF9933] bg-[#1C1E22] p-3.5 text-xs">
           {(() => {
             const active = nodes.find((n) => n.id === selectedNode)!;
             return (
@@ -227,7 +227,7 @@ export function MicroservicesTelemetry({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-[#FAF7F0] text-xs">{active.title}</span>
-                    <span className="bg-[#26282D] text-[#8A6D1F] px-2 py-0.5 border border-[#3A3D45] text-[10px]">
+                    <span className="bg-[#26282D] text-[#FF9933] px-2 py-0.5 border border-[#3A3D45] text-[10px]">
                       {active.category}
                     </span>
                   </div>
@@ -237,7 +237,7 @@ export function MicroservicesTelemetry({
                   onClick={() => setSelectedNode(null)}
                   className="self-end sm:self-center text-[#A09D95] hover:text-[#FAF7F0] font-bold text-xs"
                 >
-                  [CLOSE_DRAWER]
+                  Close
                 </button>
               </div>
             );

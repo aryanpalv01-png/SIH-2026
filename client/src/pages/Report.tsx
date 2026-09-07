@@ -157,39 +157,39 @@ export default function Report() {
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-b border-[#3A3D45] pb-3 text-xs">
         <Link
           href="/history"
-          className="inline-flex items-center gap-1.5 font-mono text-[#D1CEC7] hover:text-[#8A6D1F] transition-colors"
+          className="inline-flex items-center gap-1.5 font-mono text-slate-300 hover:text-[#FF9933] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>[ESC] {t("audit_ledger")}</span>
+          <span>{t("audit_ledger")}</span>
         </Link>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
-            className="h-8 flex-1 sm:flex-none gap-1.5 border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:bg-[#3A3D45] hover:text-[#FAF7F0] font-mono text-[11px]"
+            className="h-8 flex-1 sm:flex-none gap-1.5 border-[#3A3D45] bg-[#26282D] text-slate-300 hover:bg-[#3A3D45] hover:text-white font-mono text-[11px]"
             onClick={() => setShowTelemetry(!showTelemetry)}
           >
-            <Activity className="h-3.5 w-3.5 text-[#8A6D1F]" />
-            {showTelemetry ? "[HIDE_TELEMETRY]" : "[VIEW_TELEMETRY]"}
+            <Activity className="h-3.5 w-3.5 text-[#FF9933]" />
+            {showTelemetry ? "Hide Architecture Flow" : "View Architecture Flow"}
           </Button>
 
           <Button
             variant="outline"
             size="sm"
-            className="h-8 flex-1 sm:flex-none gap-1.5 border-[#8A6D1F] bg-[#8A6D1F]/15 text-[#FAF7F0] hover:bg-[#8A6D1F]/30 font-mono text-[11px]"
+            className="h-8 flex-1 sm:flex-none gap-1.5 border-[#FF9933] bg-[#FF9933]/15 text-white hover:bg-[#FF9933]/25 font-mono text-[11px]"
             onClick={() => setShowPdfModal(true)}
           >
-            <Download className="h-3.5 w-3.5 text-[#8A6D1F]" />
+            <Download className="h-3.5 w-3.5 text-[#FF9933]" />
             {t("export_pdf")}
           </Button>
 
           <Link href="/verify" className="w-full sm:w-auto">
             <Button
               size="sm"
-              className="h-8 w-full sm:w-auto gap-1.5 border border-[#3A3D45] bg-[#1C1E22] text-[#D1CEC7] hover:bg-[#26282D] hover:text-[#FAF7F0] font-mono text-[11px]"
+              className="h-8 w-full sm:w-auto gap-1.5 border border-[#3A3D45] bg-[#1C1E22] text-slate-300 hover:bg-[#26282D] hover:text-white font-mono text-[11px]"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              [NEW_SCAN]
+              New Scan
             </Button>
           </Link>
         </div>
@@ -210,12 +210,12 @@ export default function Report() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 sm:gap-6 items-start">
           {/* Top-Left: Large Serif Verdict + Score */}
           <div>
-            <div className="flex items-center gap-2 font-mono text-[10.5px]">
-              <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40">
+            <div className="flex items-center gap-2 font-mono text-[11px]">
+              <span className="command-badge bg-[#FF9933]/15 text-[#FFB057] border-[#FF9933]/40 font-bold">
                 {t("confidence_score")}
               </span>
-              <span className="text-[#A09D95] truncate">
-                REF: <strong className="text-[#FAF7F0]">{document.reference}</strong>
+              <span className="text-slate-400 truncate">
+                Ref: <strong className="text-white">{document.reference}</strong>
               </span>
             </div>
 
@@ -225,26 +225,26 @@ export default function Report() {
                 <span
                   className={`font-serif text-4xl sm:text-6xl font-bold tracking-tight ${
                     meta.tone === "verified"
-                      ? "text-[#22C55E]"
+                      ? "text-[#138808]"
                       : meta.tone === "forged"
                       ? "text-rose-500"
-                      : "text-amber-400"
+                      : "text-[#FF9933]"
                   }`}
                 >
                   {document.score}
                 </span>
-                <span className="font-mono text-xs sm:text-base text-[#A09D95]">
+                <span className="font-mono text-xs sm:text-base text-slate-400">
                   / 100
                 </span>
               </div>
 
               {/* Large Serif Verdict */}
               <div className="border-l border-[#3A3D45] pl-3 sm:pl-5">
-                <h1 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#FAF7F0]">
+                <h1 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-white">
                   {meta.label.toUpperCase()}
                 </h1>
-                <p className="font-mono text-[10.5px] text-[#A09D95] mt-0.5 uppercase tracking-wider">
-                  STATUTORY_STATUS: {document.status}
+                <p className="font-mono text-[11px] text-slate-400 mt-0.5 uppercase tracking-normal">
+                  Statutory Status: {document.status}
                 </p>
               </div>
             </div>
@@ -252,26 +252,26 @@ export default function Report() {
 
           {/* Top-Right: Telemetry Metadata Matrix */}
           <div className="border border-[#3A3D45] bg-[#1C1E22] p-4 font-mono text-xs space-y-2">
-            <div className="flex items-center justify-between border-b border-[#3A3D45]/60 pb-1.5 text-[10.5px] text-[#A09D95]">
-              <span>LEDGER_TELEMETRY</span>
-              <span className="text-[#22C55E]">[CRYPTOGRAPHICALLY_SEALED]</span>
+            <div className="flex items-center justify-between border-b border-[#3A3D45]/60 pb-1.5 text-[10.5px] text-slate-400">
+              <span className="font-semibold uppercase tracking-normal">Ledger Telemetry</span>
+              <span className="text-[#138808] font-bold">Cryptographically Sealed</span>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px]">
               <div>
-                <span className="text-[#A09D95]">DOCUMENT_TYPE:</span>
-                <p className="font-bold text-[#FAF7F0]">{formatDocumentType(document.type)}</p>
+                <span className="text-slate-400">Document Type:</span>
+                <p className="font-bold text-white">{formatDocumentType(document.type)}</p>
               </div>
               <div>
-                <span className="text-[#A09D95]">ORIGINAL_NAME:</span>
-                <p className="font-bold text-[#FAF7F0] truncate">{document.filename}</p>
+                <span className="text-slate-400">Original Name:</span>
+                <p className="font-bold text-white truncate">{document.filename}</p>
               </div>
               <div>
-                <span className="text-[#A09D95]">INGESTION_TIME:</span>
-                <p className="font-bold text-[#FAF7F0]">{formatDateTime(document.uploadedAt)}</p>
+                <span className="text-slate-400">Ingestion Time:</span>
+                <p className="font-bold text-white">{formatDateTime(document.uploadedAt)}</p>
               </div>
               <div>
-                <span className="text-[#A09D95]">SECURITY_VAULT:</span>
-                <p className="font-bold text-[#8A6D1F] truncate">{user?.email || "ANALYST_VAULT"}</p>
+                <span className="text-slate-400">Security Vault:</span>
+                <p className="font-bold text-[#FF9933] truncate">{user?.email || "Authorized Officer"}</p>
               </div>
             </div>
           </div>
@@ -279,18 +279,18 @@ export default function Report() {
 
         {/* Global Score Progress Bar */}
         <div className="mt-5 pt-4 border-t border-[#3A3D45]">
-          <div className="flex items-center justify-between font-mono text-[10px] text-[#A09D95] mb-1.5 uppercase">
+          <div className="flex items-center justify-between font-mono text-[11px] text-slate-400 mb-1.5">
             <span>Evidence Risk Index (0 = Definite Forgery, 100 = Certified Genuine)</span>
-            <span>Score: {document.score}%</span>
+            <span className="font-bold text-white">Score: {document.score}%</span>
           </div>
           <div className="h-1.5 w-full bg-[#1C1E22] border border-[#3A3D45]">
             <div
               className={`h-full transition-all duration-500 ${
                 meta.tone === "verified"
-                  ? "bg-[#22C55E]"
+                  ? "bg-[#138808]"
                   : meta.tone === "forged"
                   ? "bg-rose-500"
-                  : "bg-amber-400"
+                  : "bg-[#FF9933]"
               }`}
               style={{ width: `${document.score}%` }}
             />
@@ -304,42 +304,42 @@ export default function Report() {
         <div className="space-y-4">
           {/* Workbench Mode Selector Bar */}
           <div className="flex items-center justify-between border-b border-[#3A3D45] pb-2 font-mono text-xs">
-            <span className="text-[10.5px] text-[#A09D95] uppercase tracking-wider">
-              INSPECTION_LOUPE // SPECIMEN_OPTICAL
+            <span className="text-[11px] text-slate-400 uppercase tracking-normal font-semibold">
+              Forensic Specimen Visualizer
             </span>
             <div className="flex border border-[#3A3D45] bg-[#1C1E22]">
               <button
                 onClick={() => setViewMode("anomalies")}
-                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono transition-colors ${
+                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono transition-colors cursor-pointer ${
                   viewMode === "anomalies"
-                    ? "bg-[#8A6D1F] text-[#FAF7F0] font-bold"
-                    : "text-[#A09D95] hover:text-[#FAF7F0]"
+                    ? "bg-[#FF9933] text-slate-950 font-bold"
+                    : "text-slate-400 hover:text-white"
                 }`}
               >
                 <Crosshair className="h-3 w-3" />
-                [BOUNDING_BOXES ({anomaliesList.length})]
+                Bounding Boxes ({anomaliesList.length})
               </button>
               <button
                 onClick={() => setViewMode("canvas")}
-                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono transition-colors border-l border-[#3A3D45] ${
+                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono transition-colors border-l border-[#3A3D45] cursor-pointer ${
                   viewMode === "canvas"
-                    ? "bg-[#8A6D1F] text-[#FAF7F0] font-bold"
-                    : "text-[#A09D95] hover:text-[#FAF7F0]"
+                    ? "bg-[#FF9933] text-slate-950 font-bold"
+                    : "text-slate-400 hover:text-white"
                 }`}
               >
                 <Layers className="h-3 w-3" />
-                [LAYER_CANVAS]
+                Layer Canvas
               </button>
               <button
                 onClick={() => setViewMode("card")}
-                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono transition-colors border-l border-[#3A3D45] ${
+                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono transition-colors border-l border-[#3A3D45] cursor-pointer ${
                   viewMode === "card"
-                    ? "bg-[#8A6D1F] text-[#FAF7F0] font-bold"
-                    : "text-[#A09D95] hover:text-[#FAF7F0]"
+                    ? "bg-[#FF9933] text-slate-950 font-bold"
+                    : "text-slate-400 hover:text-white"
                 }`}
               >
                 <FileText className="h-3 w-3" />
-                [METADATA_CARD]
+                Metadata Card
               </button>
             </div>
           </div>
@@ -362,29 +362,29 @@ export default function Report() {
 
           {/* Specimen Ingestion Record */}
           <div className="terminal-panel p-4 font-mono text-xs">
-            <div className="flex items-center justify-between border-b border-[#3A3D45] pb-2 text-[10.5px] text-[#A09D95] uppercase">
-              <span className="flex items-center gap-1.5">
-                <Hash className="h-3.5 w-3.5 text-[#8A6D1F]" />
-                CRYPTOGRAPHIC_DIGEST_MANIFEST
+            <div className="flex items-center justify-between border-b border-[#3A3D45] pb-2 text-[11px] text-slate-400 uppercase tracking-normal">
+              <span className="flex items-center gap-1.5 font-semibold">
+                <Hash className="h-3.5 w-3.5 text-[#FF9933]" />
+                Cryptographic Digest Manifest
               </span>
-              <span>IMMUTABLE</span>
+              <span className="text-[#138808] font-bold">Immutable</span>
             </div>
             <div className="mt-2.5 space-y-2 text-[11px]">
               <div className="flex justify-between">
-                <span className="text-[#A09D95]">SHA-256 HASH:</span>
-                <span className="text-[#FAF7F0] font-bold">{document.reference}</span>
+                <span className="text-slate-400">SHA-256 Digest:</span>
+                <span className="text-white font-bold">{document.reference}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#A09D95]">PAYLOAD_SIZE:</span>
-                <span className="text-[#FAF7F0]">{document.fileSize}</span>
+                <span className="text-slate-400">Payload Size:</span>
+                <span className="text-white">{document.fileSize}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#A09D95]">MIME_CONTAINER:</span>
-                <span className="text-[#FAF7F0]">{document.mimeType}</span>
+                <span className="text-slate-400">MIME Format:</span>
+                <span className="text-white">{document.mimeType}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#A09D95]">TIMESTAMP:</span>
-                <span className="text-[#FAF7F0]">{document.uploadedAt}</span>
+                <span className="text-slate-400">Screening Timestamp:</span>
+                <span className="text-white">{document.uploadedAt}</span>
               </div>
             </div>
           </div>
@@ -395,8 +395,8 @@ export default function Report() {
           {/* Table Controls & Filter Tabs */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#3A3D45] pb-2 font-mono text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-[10.5px] text-[#A09D95] uppercase tracking-wider">
-                COMPLIANCE_CHECKS ({document.checks.length})
+              <span className="text-[11px] text-slate-400 uppercase tracking-normal font-semibold">
+                Forensic Checks ({document.checks.length})
               </span>
             </div>
 
@@ -406,10 +406,10 @@ export default function Report() {
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  className={`px-2 py-0.5 font-mono text-[10px] uppercase transition-colors border ${
+                  className={`px-2 py-0.5 font-mono text-[10.5px] uppercase transition-colors border cursor-pointer ${
                     categoryFilter === cat
-                      ? "border-[#8A6D1F] bg-[#8A6D1F]/20 text-[#FAF7F0] font-bold"
-                      : "border-[#3A3D45] bg-[#1C1E22] text-[#A09D95] hover:text-[#FAF7F0]"
+                      ? "border-[#FF9933] bg-[#FF9933]/20 text-[#FFB057] font-bold"
+                      : "border-[#3A3D45] bg-[#1C1E22] text-slate-400 hover:text-white"
                   }`}
                 >
                   {cat}
@@ -418,13 +418,13 @@ export default function Report() {
             </div>
           </div>
 
-          {/* DENSE COMPLIANCE DATA TABLE (Replaces Accordions!) */}
+          {/* DENSE COMPLIANCE DATA TABLE */}
           <div className="terminal-panel overflow-x-auto">
             <table className="dossier-table w-full text-left font-mono text-xs">
               <thead>
                 <tr>
                   <th className="py-2.5 px-3">{t("col_file")}</th>
-                  <th className="py-2.5 px-3">LAYER</th>
+                  <th className="py-2.5 px-3">Layer</th>
                   <th className="py-2.5 px-3">{t("col_status")}</th>
                   <th className="py-2.5 px-3 text-right">{t("col_score")}</th>
                   <th className="py-2.5 px-3">{t("col_observation")}</th>
@@ -442,46 +442,46 @@ export default function Report() {
                       onClick={() => setSelectedCheck(isSelected ? null : check)}
                       className={`cursor-pointer transition-colors ${
                         isSelected
-                          ? "bg-[#8A6D1F]/20"
+                          ? "bg-[#FF9933]/15"
                           : isFlag
                           ? "bg-rose-950/20 hover:bg-rose-950/30"
                           : "hover:bg-[#1C1E22]"
                       }`}
                     >
-                      <td className="py-2.5 px-3 font-bold text-[#FAF7F0] whitespace-nowrap">
+                      <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {isFlag && <AlertTriangle className="h-3.5 w-3.5 text-rose-500 shrink-0" />}
-                          {isPass && <ShieldCheck className="h-3.5 w-3.5 text-[#22C55E] shrink-0" />}
-                          {!isFlag && !isPass && <HelpCircle className="h-3.5 w-3.5 text-[#A09D95] shrink-0" />}
+                          {isPass && <ShieldCheck className="h-3.5 w-3.5 text-[#138808] shrink-0" />}
+                          {!isFlag && !isPass && <HelpCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
                           <span>{check.shortName || check.name}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-[10px] text-[#A09D95] uppercase whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-[10.5px] text-slate-400 uppercase whitespace-nowrap">
                         {getCheckCategory(check).toUpperCase()}
                       </td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         {isPass ? (
-                          <span className="command-badge bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/40 font-bold text-[10px]">
-                            [PASS]
+                          <span className="command-badge command-badge-verified font-bold text-[10px]">
+                            Pass
                           </span>
                         ) : isFlag ? (
-                          <span className="command-badge bg-rose-950/70 text-rose-400 border-rose-800 font-bold text-[10px]">
-                            [FLAG]
+                          <span className="command-badge command-badge-forged font-bold text-[10px]">
+                            Flag
                           </span>
                         ) : (
-                          <span className="command-badge bg-[#1C1E22] text-[#A09D95] border-[#3A3D45] text-[10px]">
-                            [N/A]
+                          <span className="command-badge bg-[#1C1E22] text-slate-400 border-[#3A3D45] text-[10px]">
+                            N/A
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-bold text-[#FAF7F0] whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-right font-bold text-white whitespace-nowrap">
                         {check.result === "not_applicable" ? (
-                          <span className="text-[#A09D95] font-normal">--</span>
+                          <span className="text-slate-500 font-normal">--</span>
                         ) : (
                           `${check.confidence}%`
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-[11px] text-[#D1CEC7] max-w-xs truncate">
+                      <td className="py-2.5 px-3 text-[11px] text-slate-300 max-w-xs truncate">
                         {check.explanation}
                       </td>
                     </tr>
@@ -491,52 +491,52 @@ export default function Report() {
             </table>
 
             {/* Table Summary Footer */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#3A3D45] p-3 font-mono text-[11px] text-[#A09D95] bg-[#1C1E22]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#3A3D45] p-3 font-mono text-[11px] text-slate-400 bg-[#1C1E22]">
               <div className="flex items-center gap-4">
                 <span>
-                  PASSED: <strong className="text-[#22C55E]">{passed.length}</strong>
+                  Passed: <strong className="text-[#138808]">{passed.length}</strong>
                 </span>
                 <span>
-                  FLAGGED: <strong className="text-rose-400">{flagged.length}</strong>
+                  Flagged: <strong className="text-rose-400">{flagged.length}</strong>
                 </span>
                 <span>
-                  NOT_APPLICABLE: <strong className="text-[#FAF7F0]">{notApplicable.length}</strong>
+                  Not Applicable: <strong className="text-white">{notApplicable.length}</strong>
                 </span>
               </div>
-              <span className="text-[10px] text-[#A09D95]">
-                TOTAL_CHECKS: {document.checks.length}
+              <span className="text-[11px] text-slate-400">
+                Total Checks: {document.checks.length}
               </span>
             </div>
           </div>
 
           {/* Selected Check Inspection Detail Drawer */}
           {selectedCheck && (
-            <div className="terminal-panel p-4 border border-[#8A6D1F] bg-[#1C1E22] text-xs font-mono animate-in fade-in">
+            <div className="terminal-panel p-4 border border-[#FF9933] bg-[#1C1E22] text-xs font-mono animate-in fade-in">
               <div className="flex items-start justify-between gap-3 border-b border-[#3A3D45] pb-2">
                 <div>
-                  <span className="text-[10px] text-[#8A6D1F] uppercase font-bold">
-                    INSPECTING CHECK :: {selectedCheck.id}
+                  <span className="text-[10.5px] text-[#FF9933] uppercase font-bold">
+                    Check Detail: {selectedCheck.id}
                   </span>
-                  <h3 className="font-serif text-sm font-bold text-[#FAF7F0] mt-0.5">
+                  <h3 className="font-serif text-sm font-bold text-white mt-0.5">
                     {selectedCheck.name}
                   </h3>
                 </div>
                 <button
                   onClick={() => setSelectedCheck(null)}
-                  className="text-[#A09D95] hover:text-[#FAF7F0] font-bold"
+                  className="text-slate-400 hover:text-white font-bold cursor-pointer"
                 >
-                  [CLOSE]
+                  Close
                 </button>
               </div>
 
               <div className="mt-3 space-y-2 text-[11px]">
-                <p className="text-[#FAF7F0] font-sans leading-relaxed">
+                <p className="text-white font-sans leading-relaxed">
                   {selectedCheck.explanation}
                 </p>
 
                 {selectedCheck.result === "not_applicable" && (
-                  <div className="p-2 border border-[#3A3D45] bg-[#26282D] text-[#D1CEC7]">
-                    <span className="text-[#8A6D1F] font-bold">Contextual Justification: </span>
+                  <div className="p-2 border border-[#3A3D45] bg-[#26282D] text-slate-300">
+                    <span className="text-[#FF9933] font-bold">Contextual Justification: </span>
                     <span>{getNARationale(selectedCheck, document)}</span>
                   </div>
                 )}
@@ -556,16 +556,16 @@ export default function Report() {
           {/* Action Decision Block: Human Review vs Archive */}
           <div className="terminal-panel p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-mono text-[10.5px] text-[#A09D95] uppercase">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#8A6D1F]" />
-                DISPOSITION
+              <div className="flex items-center gap-2 font-mono text-[10.5px] text-slate-400 uppercase">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#FF9933]" />
+                Institutional Disposition
               </div>
-              <span className="font-mono text-[10.5px] text-[#8A6D1F]">
-                {flagged.length ? "ACTION_REQUIRED" : "ARCHIVE_READY"}
+              <span className="font-mono text-[10.5px] text-[#FF9933] font-semibold">
+                {flagged.length ? "Action Required" : "Archive Ready"}
               </span>
             </div>
 
-            <h3 className="font-serif text-base font-bold text-[#FAF7F0]">
+            <h3 className="font-serif text-base font-bold text-white">
               {flagged.length
                 ? "Discrepancy Action: Queue Human Forensic Verification"
                 : "Disposition: Retain in Institutional Compliance Ledger"}
@@ -576,26 +576,26 @@ export default function Report() {
                 <Button
                   onClick={handleReview}
                   disabled={hasReview || reviewMutation.isPending}
-                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/80 font-mono text-xs px-5 font-bold"
+                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] border border-[#FF9933] bg-[#FF9933] text-slate-950 hover:bg-[#E68524] font-mono text-xs px-5 font-bold cursor-pointer shadow-xs"
                 >
                   {hasReview
-                    ? "[REVIEW_QUEUED]"
+                    ? "Review Queued"
                     : reviewMutation.isPending
-                    ? "[TRANSMITTING...]"
+                    ? "Transmitting…"
                     : t("req_human_review")}
                   <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Button>
               ) : (
                 <Button
                   variant="outline"
-                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] border border-[#3A3D45] bg-[#1C1E22] text-[#FAF7F0] hover:bg-[#26282D] font-mono text-xs px-4"
+                  className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] border border-[#3A3D45] bg-[#1C1E22] text-white hover:bg-[#26282D] font-mono text-xs px-4 cursor-pointer"
                   onClick={() =>
                     toast.info("Reference Hash Copied", {
                       description: document.reference,
                     })
                   }
                 >
-                  <LockKeyhole className="mr-2 h-3.5 w-3.5 text-[#8A6D1F]" />
+                  <LockKeyhole className="mr-2 h-3.5 w-3.5 text-[#FF9933]" />
                   {t("copy_hash")}
                 </Button>
               )}
@@ -605,8 +605,8 @@ export default function Report() {
       </div>
 
       {/* Regulatory & Institutional Footnote */}
-      <div className="border border-[#3A3D45] bg-[#1C1E22] px-4 py-3 font-mono text-[10.5px] text-[#A09D95] flex items-center gap-2">
-        <HelpCircle className="h-4 w-4 shrink-0 text-[#8A6D1F]" />
+      <div className="border border-[#3A3D45] bg-[#1C1E22] px-4 py-3 font-mono text-[11px] text-slate-400 flex items-center gap-2">
+        <HelpCircle className="h-4 w-4 shrink-0 text-[#FF9933]" />
         <span>
           STATUTORY COMPLIANCE NOTICE: VeriScan operates strictly via independent algorithmic analysis, local neural
           weight inference, and mathematical checksums. It does NOT connect to live government databases.

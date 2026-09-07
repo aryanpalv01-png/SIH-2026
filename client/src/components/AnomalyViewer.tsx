@@ -60,17 +60,17 @@ export function AnomalyViewer({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-[#3A3D45] pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 flex items-center gap-1.5">
-              <Crosshair className="h-3 w-3 text-[#8A6D1F]" />
-              FORENSIC_LOUPE // BOUNDING_BOX
+            <span className="command-badge bg-[#FF9933]/15 text-[#FFB057] border-[#FF9933]/40 flex items-center gap-1.5 font-bold">
+              <Crosshair className="h-3 w-3 text-[#FF9933]" />
+              Forensic Specimen Loupe
             </span>
             {showAnomalies && (
               <span className="command-badge bg-rose-950/60 text-rose-300 border-rose-800/60">
-                {activeAnomalies.length} FLAGGED {activeAnomalies.length === 1 ? "ZONE" : "ZONES"}
+                {activeAnomalies.length} Flagged {activeAnomalies.length === 1 ? "Zone" : "Zones"}
               </span>
             )}
           </div>
-          <h2 className="font-serif text-base sm:text-lg font-bold text-[#FAF7F0] mt-1 tracking-tight">
+          <h2 className="font-serif text-base sm:text-lg font-bold text-white mt-1 tracking-tight">
             {title}
           </h2>
         </div>
@@ -79,36 +79,36 @@ export function AnomalyViewer({
         <button
           type="button"
           onClick={() => setShowAnomalies((prev) => !prev)}
-          className="inline-flex items-center justify-center gap-2 border border-[#8A6D1F] bg-[#8A6D1F]/15 hover:bg-[#8A6D1F]/25 text-[#FAF7F0] font-mono font-semibold px-3 py-1.5 text-xs transition-colors cursor-pointer select-none"
+          className="inline-flex items-center justify-center gap-2 border border-[#FF9933] bg-[#FF9933]/15 hover:bg-[#FF9933]/25 text-white font-mono font-semibold px-3 py-1.5 text-xs transition-colors cursor-pointer select-none"
         >
           {showAnomalies ? (
             <>
-              <EyeOff className="h-3.5 w-3.5 text-[#8A6D1F]" />
-              <span>[HIDE_TAMPER_ZONES]</span>
+              <EyeOff className="h-3.5 w-3.5 text-[#FF9933]" />
+              <span>Hide Tamper Zones</span>
             </>
           ) : (
             <>
-              <Eye className="h-3.5 w-3.5 text-[#8A6D1F]" />
-              <span>[SHOW_TAMPER_ZONES]</span>
+              <Eye className="h-3.5 w-3.5 text-[#FF9933]" />
+              <span>Show Tamper Zones</span>
             </>
           )}
         </button>
       </div>
 
       {/* Coordinate Readout Bar */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border border-[#3A3D45] bg-[#1C1E22] px-3 py-1.5 font-mono text-[11px] text-[#A09D95]">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border border-[#3A3D45] bg-[#1C1E22] px-3 py-1.5 font-mono text-[11px] text-slate-400">
         <div className="flex items-center gap-2">
-          <span className="text-[#8A6D1F] font-bold">COORDINATE_HUD:</span>
+          <span className="text-[#FF9933] font-bold">Coordinate HUD:</span>
           {hoveredOrSelected ? (
-            <span className="text-[#FAF7F0]">
-              ZONE #{hoveredOrSelected.id} :: x: <strong className="text-[#22C55E]">{hoveredOrSelected.x_pct}%</strong>, y: <strong className="text-[#22C55E]">{hoveredOrSelected.y_pct}%</strong>, w: {hoveredOrSelected.width_pct}%, h: {hoveredOrSelected.height_pct}%
+            <span className="text-white">
+              Zone #{hoveredOrSelected.id} · x: <strong className="text-[#138808]">{hoveredOrSelected.x_pct}%</strong>, y: <strong className="text-[#138808]">{hoveredOrSelected.y_pct}%</strong>, w: {hoveredOrSelected.width_pct}%, h: {hoveredOrSelected.height_pct}%
             </span>
           ) : (
-            <span>HOVER_ZONE_TO_READ_COORDINATES</span>
+            <span>Hover zone to inspect coordinates</span>
           )}
         </div>
-        <div className="text-[10px] text-[#A09D95]/70">
-          PROJECTION: 1:1 CANONICAL_NORM
+        <div className="text-[10px] text-slate-500">
+          Projection: 1:1 Canonical
         </div>
       </div>
 
@@ -178,18 +178,18 @@ export function AnomalyViewer({
                 onMouseLeave={() => setActiveAnomalyId(null)}
                 className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 border font-mono text-xs transition-colors cursor-pointer ${
                   activeAnomalyId === item.id
-                    ? "border-rose-500 bg-rose-950/30 text-[#FAF7F0]"
-                    : "border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:border-[#8A6D1F]"
+                    ? "border-rose-500 bg-rose-950/30 text-white"
+                    : "border-[#3A3D45] bg-[#26282D] text-slate-300 hover:border-[#FF9933]"
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className="command-badge bg-rose-950/60 text-rose-300 border-rose-800/60 text-[10px]">
-                    ZONE #{item.id}
+                    Zone #{item.id}
                   </span>
-                  <span className="text-[11px] text-[#FAF7F0]">{item.reason}</span>
+                  <span className="text-[11px] text-white">{item.reason}</span>
                 </div>
-                <div className="text-[10px] text-[#A09D95] font-mono">
-                  x: <strong className="text-[#8A6D1F]">{item.x_pct}%</strong> y: <strong className="text-[#8A6D1F]">{item.y_pct}%</strong> [w:{item.width_pct}% h:{item.height_pct}%]
+                <div className="text-[10px] text-slate-400 font-mono">
+                  x: <strong className="text-[#FF9933]">{item.x_pct}%</strong> y: <strong className="text-[#FF9933]">{item.y_pct}%</strong> [w:{item.width_pct}% h:{item.height_pct}%]
                 </div>
               </div>
             ))}

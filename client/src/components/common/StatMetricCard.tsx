@@ -22,12 +22,12 @@ export function StatMetricCard({
 }: StatMetricCardProps) {
   const accentStyles = {
     saffron: {
-      border: "border-[#8A6D1F]/50",
-      text: "text-[#8A6D1F]",
+      border: "border-[#FF9933]/50",
+      text: "text-[#FF9933]",
     },
     green: {
-      border: "border-[#22C55E]/50",
-      text: "text-[#22C55E]",
+      border: "border-[#138808]/50",
+      text: "text-[#138808]",
     },
     review: {
       border: "border-amber-500/50",
@@ -35,7 +35,7 @@ export function StatMetricCard({
     },
     navy: {
       border: "border-[#3A3D45]",
-      text: "text-[#D1CEC7]",
+      text: "text-slate-300",
     },
     crimson: {
       border: "border-rose-500/50",
@@ -46,7 +46,7 @@ export function StatMetricCard({
   return (
     <div className="terminal-panel p-4 font-mono">
       <div className="flex items-center justify-between border-b border-[#3A3D45] pb-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-[#A09D95]">
+        <span className="text-[11px] font-bold uppercase tracking-normal text-slate-400">
           {label}
         </span>
         <div className={`flex h-7 w-7 items-center justify-center border ${accentStyles.border} bg-[#1C1E22] ${accentStyles.text}`}>
@@ -55,16 +55,16 @@ export function StatMetricCard({
       </div>
 
       <div className="mt-3">
-        <p className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#FAF7F0]">
+        <p className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-white">
           {value}
         </p>
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[10.5px]">
-          <p className="truncate text-[#A09D95]">{note}</p>
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
+          <p className="truncate text-slate-400">{note}</p>
           {trend && (
             <span
-              className={`shrink-0 px-1.5 py-0.5 text-[9.5px] font-bold border ${
+              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-bold border ${
                 trend.positive
-                  ? "border-[#22C55E]/30 bg-[#22C55E]/10 text-[#22C55E]"
+                  ? "border-[#138808]/40 bg-[#138808]/10 text-[#4ADE80]"
                   : "border-amber-500/30 bg-amber-500/10 text-amber-400"
               }`}
             >

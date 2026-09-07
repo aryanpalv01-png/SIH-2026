@@ -19,18 +19,18 @@ export function GovMasthead({ compact = false }: GovMastheadProps) {
         <div className="mx-auto flex max-w-[1520px] items-center justify-between gap-2">
           {/* Left: National Identity */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <span className="flex items-center gap-1.5 font-bold tracking-tight text-[#8A6D1F] shrink-0">
+            <span className="flex items-center gap-1.5 font-bold tracking-tight text-[#FF9933] shrink-0">
               <span>🇮🇳</span>
               <span>भारत सरकार</span>
             </span>
             <span className="text-[#3A3D45] hidden sm:inline">|</span>
-            <span className="font-semibold tracking-tight text-[#FAF7F0] hidden sm:inline truncate">
+            <span className="font-semibold tracking-tight text-white hidden sm:inline truncate">
               {t("govt_of_india")}
             </span>
             {!compact && (
               <>
                 <span className="hidden text-[#3A3D45] lg:inline">|</span>
-                <span className="hidden text-[#A09D95] lg:inline text-[10.5px] truncate">
+                <span className="hidden text-slate-400 lg:inline text-[10.5px] truncate">
                   {t("meity")}
                 </span>
               </>
@@ -39,11 +39,11 @@ export function GovMasthead({ compact = false }: GovMastheadProps) {
 
           {/* Right: Telemetry & Multilingual Switcher */}
           <div className="flex items-center gap-2 sm:gap-2.5 text-[10.5px] shrink-0">
-            <span className="hidden items-center gap-1 text-[#22C55E] font-semibold md:inline-flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E]" /> {t("digital_india")}
+            <span className="hidden items-center gap-1 text-[#138808] font-semibold md:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#138808]" /> {t("digital_india")}
             </span>
             <span className="text-[#3A3D45] hidden md:inline">|</span>
-            <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 font-bold hidden sm:inline-flex">
+            <span className="command-badge bg-[#FF9933]/15 text-[#FFB057] border-[#FF9933]/40 font-bold hidden sm:inline-flex">
               {t("satyam_eva_jayate")}
             </span>
             <LanguageSwitcher compact={compact} />

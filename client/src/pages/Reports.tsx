@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Sparkles,
   HelpCircle,
+  LockKeyhole,
 } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "wouter";
@@ -20,9 +21,10 @@ import { Link } from "wouter";
 export default function Reports() {
   const { user } = useAuth();
   const userIdentifier = user?.email || user?.openId || "guest";
-  const scansQuery = trpc.scans.list.useQuery(undefined, { retry: false });
+  const scansQuery = trpc.scans.list.useQuery(undefined, { retry: false, enabled: Boolean(user) });
 
   const documents = useMemo(() => {
+    if (!user) return [];
     if (scansQuery.data && Array.isArray(scansQuery.data) && scansQuery.data.length > 0) {
       return (scansQuery.data as any[]).map((doc) => ({
         id: String(doc.id),
@@ -39,32 +41,68 @@ export default function Reports() {
       }));
     }
     return getPreviewDocuments(userIdentifier);
-  }, [scansQuery.data, userIdentifier]);
+  }, [user, scansQuery.data, userIdentifier]);
 
   const verified = documents.filter((document) => document.status === "verified").length;
   const review = documents.filter((document) => document.status === "needs_review").length;
   const forged = documents.filter((document) => document.status === "likely_forged").length;
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-[1440px] space-y-5">
+        <PageHeader
+          categoryHindi="सत्यापन रिपोर्ट सारांश"
+          categoryEnglish="Verdict Dossiers · Official Summary"
+          title="Forensic Verdict Ledgers"
+          subtitle="Restricted access for authenticated compliance officers."
+        />
+        <div className="terminal-panel p-8 sm:p-12 text-center border border-[#3A3D45] bg-[#26282D]">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#FF9933]/15 text-[#FF9933] border border-[#FF9933]/30 mb-4">
+            <LockKeyhole className="h-6 w-6" />
+          </div>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold text-white">
+            Restricted Verdict Archive
+          </h2>
+          <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+            Forensic analysis dossiers, tamper certificates, and disposition records are restricted to authenticated personnel.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/auth/login">
+              <Button className="bg-[#FF9933] text-slate-950 hover:bg-[#E68524] font-bold px-5 h-9 rounded-xs cursor-pointer shadow-xs">
+                Sign In to View Dossiers
+              </Button>
+            </Link>
+            <Link href="/auth/signup">
+              <Button variant="outline" className="border-[#3A3D45] bg-[#181A1D] text-slate-200 hover:border-[#FF9933] hover:text-white px-4 h-9 rounded-xs cursor-pointer">
+                Register Account
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Top Banner */}
       <PageHeader
         categoryHindi="सत्यापन रिपोर्ट सारांश"
-        categoryEnglish="VERDICT_DOSSIERS // AUDIT_SUMMARY"
+        categoryEnglish="Verdict Dossiers · Official Summary"
         title="Forensic Verdict Ledgers"
         subtitle={
           <>
-            Evidentiary breakdown of document screening outcomes for vault: <span className="text-[#FAF7F0] font-semibold">{user?.email || "LOCAL_OFFICER"}</span>
+            Evidentiary breakdown of document screening outcomes for vault: <span className="text-white font-semibold">{user?.email || "Authorized Officer"}</span>
           </>
         }
-        accountBadge={user?.email ? `VAULT: ${user.email}` : undefined}
+        accountBadge={user?.email ? `Vault: ${user.email}` : undefined}
         actions={
           <Link href="/verify">
             <Button
               size="sm"
-              className="h-8 gap-1.5 border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/80 font-mono text-[11px] font-bold"
+              className="h-8 gap-1.5 border border-[#FF9933] bg-[#FF9933] text-slate-950 hover:bg-[#E68524] font-mono text-[11px] font-bold cursor-pointer shadow-xs"
             >
-              <FileCheck2 className="h-3.5 w-3.5" /> [NEW_VERIFICATION]
+              <FileCheck2 className="h-3.5 w-3.5" /> New Verification
             </Button>
           </Link>
         }
@@ -73,24 +111,24 @@ export default function Reports() {
       {/* 3 Verdict Metric Cards */}
       <div className="grid gap-3 md:grid-cols-3 font-mono">
         <VerdictCard
-          icon={<CheckCircle2 className="h-4 w-4 text-[#22C55E]" />}
+          icon={<CheckCircle2 className="h-4 w-4 text-[#138808]" />}
           status="verified"
           count={verified}
-          label="GENUINE / VERIFIED"
+          label="Genuine / Verified"
           body="No material visual, typographic, or mathematical anomalies detected"
         />
         <VerdictCard
-          icon={<CircleAlert className="h-4 w-4 text-amber-400" />}
+          icon={<CircleAlert className="h-4 w-4 text-[#FF9933]" />}
           status="needs_review"
           count={review}
-          label="HUMAN REVIEW REQUIRED"
+          label="Human Review Required"
           body="Inconclusive indicators or typography boundary variations"
         />
         <VerdictCard
           icon={<ShieldAlert className="h-4 w-4 text-rose-400" />}
           status="likely_forged"
           count={forged}
-          label="LIKELY TAMPERED"
+          label="Likely Tampered"
           body="Copy-move clone detected, OCR mismatch, or ELA recompression"
         />
       </div>
@@ -98,18 +136,18 @@ export default function Reports() {
       <section className="terminal-panel font-mono text-xs">
         <div className="flex flex-col justify-between gap-3 border-b border-[#3A3D45] p-4 sm:flex-row sm:items-center">
           <div>
-            <span className="text-[10px] text-[#A09D95] uppercase tracking-wider">
-              DOSSIER_RECORDS ({documents.length})
+            <span className="text-[11px] text-slate-400 uppercase tracking-normal">
+              Dossier Records ({documents.length})
             </span>
-            <h2 className="font-serif text-base font-bold text-[#FAF7F0] mt-0.5">
+            <h2 className="font-serif text-base font-bold text-white mt-0.5">
               Inspect Individual Forensic Reports
             </h2>
           </div>
           <Link
             href="/history"
-            className="inline-flex items-center text-[11px] font-bold text-[#8A6D1F] hover:text-[#FAF7F0] gap-1 transition-colors"
+            className="inline-flex items-center text-[11px] font-bold text-[#FF9933] hover:text-white gap-1 transition-colors"
           >
-            [SEARCH_ARCHIVE] <ArrowRight className="h-3 w-3" />
+            Search Archive <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
 
@@ -118,13 +156,13 @@ export default function Reports() {
             <table className="dossier-table w-full text-left">
               <thead>
                 <tr>
-                  <th className="py-2.5 px-3">REF_ID</th>
-                  <th className="py-2.5 px-3">DOCUMENT_FILE</th>
-                  <th className="py-2.5 px-3">TYPE</th>
-                  <th className="py-2.5 px-3">TIMESTAMP</th>
-                  <th className="py-2.5 px-3 text-right">SCORE</th>
-                  <th className="py-2.5 px-3">VERDICT</th>
-                  <th className="py-2.5 px-3 text-right">ACTION</th>
+                  <th className="py-2.5 px-3">Reference</th>
+                  <th className="py-2.5 px-3">Document File</th>
+                  <th className="py-2.5 px-3">Type</th>
+                  <th className="py-2.5 px-3">Timestamp</th>
+                  <th className="py-2.5 px-3 text-right">Confidence</th>
+                  <th className="py-2.5 px-3">Verdict</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -134,35 +172,35 @@ export default function Reports() {
 
                   return (
                     <tr key={doc.id} className="hover:bg-[#1C1E22] transition-colors">
-                      <td className="py-2.5 px-3 font-bold text-[#8A6D1F]">{doc.reference}</td>
-                      <td className="py-2.5 px-3 font-bold text-[#FAF7F0] max-w-xs truncate">{doc.filename}</td>
-                      <td className="py-2.5 px-3 text-[10.5px] text-[#A09D95] uppercase">{formatDocumentType(doc.type)}</td>
-                      <td className="py-2.5 px-3 text-[10.5px] text-[#A09D95]">{formatDate(doc.uploadedAt)}</td>
+                      <td className="py-2.5 px-3 font-bold text-[#FF9933]">{doc.reference}</td>
+                      <td className="py-2.5 px-3 font-bold text-white max-w-xs truncate">{doc.filename}</td>
+                      <td className="py-2.5 px-3 text-[11px] text-slate-400 uppercase">{formatDocumentType(doc.type)}</td>
+                      <td className="py-2.5 px-3 text-[11px] text-slate-400">{formatDate(doc.uploadedAt)}</td>
                       <td className="py-2.5 px-3 text-right font-serif text-sm font-bold">
-                        <span className={isVerified ? "text-[#22C55E]" : isForged ? "text-rose-400" : "text-amber-400"}>
+                        <span className={isVerified ? "text-[#138808]" : isForged ? "text-rose-400" : "text-[#FF9933]"}>
                           {doc.score}
                         </span>
-                        <span className="font-sans text-[10px] text-[#A09D95]"> / 100</span>
+                        <span className="font-sans text-[10px] text-slate-500"> / 100</span>
                       </td>
                       <td className="py-2.5 px-3">
                         <span
-                          className={`command-badge text-[10px] font-bold ${
+                          className={
                             isVerified
-                              ? "bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30"
+                              ? "command-badge command-badge-verified"
                               : isForged
-                              ? "bg-rose-950/60 text-rose-400 border-rose-800"
-                              : "bg-amber-950/60 text-amber-400 border-amber-800"
-                          }`}
+                              ? "command-badge command-badge-forged"
+                              : "command-badge command-badge-review"
+                          }
                         >
-                          [{statusMeta[doc.status as DocumentStatus]?.label?.toUpperCase() || "UNKNOWN"}]
+                          {statusMeta[doc.status as DocumentStatus]?.label || "Unknown"}
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <Link
                           href={`/report/${doc.id}`}
-                          className="inline-flex items-center gap-1 border border-[#3A3D45] bg-[#1C1E22] px-2 py-1 text-[10.5px] text-[#FAF7F0] hover:border-[#8A6D1F] hover:bg-[#26282D] transition-colors"
+                          className="inline-flex items-center gap-1 border border-[#3A3D45] bg-[#1C1E22] px-2.5 py-1 text-[11px] text-white hover:border-[#FF9933] hover:bg-[#26282D] transition-colors"
                         >
-                          [VIEW_DOSSIER] <ArrowRight className="h-3 w-3" />
+                          View Dossier <ArrowRight className="h-3 w-3" />
                         </Link>
                       </td>
                     </tr>
@@ -174,18 +212,18 @@ export default function Reports() {
         ) : (
           <div className="py-6 p-4">
             <EmptyState
-              icon={<Sparkles className="h-6 w-6 text-[#8A6D1F]" />}
-              title="NO_REPORTS_GENERATED"
+              icon={<Sparkles className="h-6 w-6 text-[#FF9933]" />}
+              title="No Reports Generated"
               description="Screen your first document to populate this integrity ledger."
-              actionLabel="[SCREEN_DOCUMENT]"
+              actionLabel="Screen Document"
               actionHref="/verify"
             />
           </div>
         )}
       </section>
 
-      <div className="flex items-center gap-2 border border-[#3A3D45] bg-[#1C1E22] p-3 font-mono text-[10.5px] text-[#A09D95]">
-        <HelpCircle className="h-3.5 w-3.5 shrink-0 text-[#8A6D1F]" />
+      <div className="flex items-center gap-2 border border-[#3A3D45] bg-[#1C1E22] p-3 font-mono text-[11px] text-slate-400">
+        <HelpCircle className="h-3.5 w-3.5 shrink-0 text-[#FF9933]" />
         <span>All forensic dossiers are compiled via cryptographic preflight, computer vision (OpenCV/ELA), and localized neural inference under strict session isolation.</span>
       </div>
     </div>
@@ -207,10 +245,10 @@ function VerdictCard({
 }) {
   const borderTone =
     status === "verified"
-      ? "border-[#22C55E]/40 bg-[#1C1E22]"
+      ? "border-[#138808]/50 bg-[#1C1E22]"
       : status === "needs_review"
-      ? "border-amber-500/40 bg-[#1C1E22]"
-      : "border-rose-500/40 bg-[#1C1E22]";
+      ? "border-[#FF9933]/50 bg-[#1C1E22]"
+      : "border-rose-500/50 bg-[#1C1E22]";
 
   return (
     <div className={`terminal-panel p-4 border ${borderTone}`}>
@@ -218,10 +256,10 @@ function VerdictCard({
         <span className="flex h-7 w-7 items-center justify-center border border-[#3A3D45] bg-[#26282D]">
           {icon}
         </span>
-        <span className="font-serif text-2xl font-bold text-[#FAF7F0]">{String(count).padStart(2, "0")}</span>
+        <span className="font-serif text-2xl font-bold text-white">{String(count).padStart(2, "0")}</span>
       </div>
-      <p className="mt-3 font-mono text-xs font-bold text-[#FAF7F0]">{label}</p>
-      <p className="mt-1 text-[11px] text-[#A09D95] leading-relaxed">{body}</p>
+      <p className="mt-3 font-mono text-xs font-bold text-white">{label}</p>
+      <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">{body}</p>
     </div>
   );
 }

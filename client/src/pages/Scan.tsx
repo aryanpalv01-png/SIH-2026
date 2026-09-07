@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
 
 interface PipelineStep {
-  code: string;
+  stageNumber: number;
   name: string;
   detail: string;
   subsystem: string;
@@ -16,52 +16,52 @@ interface PipelineStep {
 
 const PIPELINE_STEPS: PipelineStep[] = [
   {
-    code: "INGEST_BYTES",
-    name: "Payload Ingestion",
-    detail: "Read payload -> Compute SHA-256 cryptographic digest",
-    subsystem: "SYS_IO",
+    stageNumber: 1,
+    name: "Payload Ingestion & Cryptographic Digest",
+    detail: "Compute immutable SHA-256 hash & verify payload buffer",
+    subsystem: "Security Core",
   },
   {
-    code: "METADATA_EXIF",
-    name: "EXIF & Header Analysis",
-    detail: "Decode tags & check editing software markers (Photoshop/GIMP)",
-    subsystem: "EXIF_PARSER",
+    stageNumber: 2,
+    name: "Metadata & EXIF Forensic Analysis",
+    detail: "Inspect editing software markers (Photoshop/GIMP) & camera tags",
+    subsystem: "EXIF Parser",
   },
   {
-    code: "DETERMINISTIC_CHECKSUM",
-    name: "Dihedral Verhoeff",
-    detail: "Verhoeff permutation check & syntax regex validation",
-    subsystem: "MATH_CORE",
+    stageNumber: 3,
+    name: "Deterministic Verhoeff Dihedral Checksum",
+    detail: "Validate permutation matrix and official document syntax",
+    subsystem: "Algorithmic Math",
   },
   {
-    code: "CRYPTOGRAPHIC_QR",
-    name: "Asymmetric QR Signature",
-    detail: "UIDAI 2048-bit digital signature & public key verification",
-    subsystem: "CRYPTO_RSA",
+    stageNumber: 4,
+    name: "UIDAI 2048-bit QR Digital Signature",
+    detail: "Validate asymmetric RSA public key digital signature",
+    subsystem: "Cryptographic RSA",
   },
   {
-    code: "ELA_COMPRESSION",
-    name: "Error Level Analysis",
-    detail: "JPEG grid 8x8 block error level matrix & resave anomaly detection",
-    subsystem: "CV_ELA",
+    stageNumber: 5,
+    name: "JPEG Error Level Analysis (ELA)",
+    detail: "Inspect 8x8 DCT compression grid for local resave anomalies",
+    subsystem: "Computer Vision",
   },
   {
-    code: "COPY_MOVE_CLONE",
-    name: "Keypoint Duplication",
-    detail: "Keypoint feature matching & duplicate visual motif map",
-    subsystem: "CV_SIFT",
+    stageNumber: 6,
+    name: "Copy-Move Duplicate Keypoint Detection",
+    detail: "Match spatial feature keypoints & detect duplicated cloned zones",
+    subsystem: "Keypoint Matching",
   },
   {
-    code: "OCR_TYPOGRAPHY",
-    name: "Typography Forensics",
-    detail: "Baseline alignment, font kerning & character weight analysis",
-    subsystem: "OCR_ALIGN",
+    stageNumber: 7,
+    name: "Typography, Baseline & Kerning Verification",
+    detail: "Inspect character baseline alignment, kerning & font weights",
+    subsystem: "OCR Typography",
   },
   {
-    code: "SCORE_FUSION",
-    name: "Bayesian Evidence Fusion",
-    detail: "Tier A hard overrides, cumulative penalties & verdict arbitration",
-    subsystem: "FUSION_ENGINE",
+    stageNumber: 8,
+    name: "Multi-Evidence Fusion & Final Arbitration",
+    detail: "Execute Tier A hard overrides & calculate confidence score",
+    subsystem: "Fusion Engine",
   },
 ];
 
@@ -107,7 +107,7 @@ export default function Scan() {
           if (step) {
             setTerminalLogs((logs) => [
               ...logs.slice(-12),
-              `[+${((next * stageDuration) / 1000).toFixed(3)}s] [${step.subsystem}] ${step.code} :: ${step.detail}`,
+              `[+${((next * stageDuration) / 1000).toFixed(3)}s] ${step.subsystem}: Completed ${step.name}`,
             ]);
           }
         }
@@ -142,18 +142,19 @@ export default function Scan() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#3A3D45] pb-3 text-xs font-mono">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-[#D1CEC7] hover:text-[#8A6D1F] transition-colors"
+          className="inline-flex items-center gap-1.5 text-slate-300 hover:text-[#FF9933] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>[ESC] ABORT_EXECUTION</span>
+          <span>Cancel Screening</span>
         </Link>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] text-[#A09D95]">
-          <span>REF: <span className="text-[#FAF7F0] font-semibold">{document.reference}</span></span>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] text-slate-400">
+          <span>Reference: <span className="text-white font-semibold">{document.reference}</span></span>
           <span className="text-[#3A3D45]">|</span>
-          <span>T+: <span className="text-[#8A6D1F] font-bold">{formatElapsed(elapsedMs)}</span></span>
+          <span>Elapsed: <span className="text-[#FF9933] font-bold">{formatElapsed(elapsedMs)}</span></span>
           <span className="text-[#3A3D45]">|</span>
-          <span className="command-badge bg-[#26282D] text-[#22C55E] border-[#3A3D45]">
-            {activeStage >= PIPELINE_STEPS.length ? "FINALIZING" : "STREAMING"}
+          <span className="command-badge command-badge-verified text-[10.5px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#138808]" />
+            {activeStage >= PIPELINE_STEPS.length ? "Finalizing" : "Analyzing"}
           </span>
         </div>
       </div>
@@ -163,44 +164,44 @@ export default function Scan() {
         {/* Terminal Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#3A3D45] px-4 py-3 sm:px-5 sm:py-3.5 bg-[#1C1E22]">
           <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-[#3A3D45] bg-[#26282D] text-[#8A6D1F]">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-[#3A3D45] bg-[#26282D] text-[#FF9933]">
               <Terminal className="h-4 w-4" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-serif text-base sm:text-lg font-bold tracking-tight text-[#FAF7F0]">
-                  Forensic Pipeline Execution Console
+                <h1 className="font-serif text-base sm:text-lg font-bold tracking-tight text-white">
+                  Forensic Pipeline Execution
                 </h1>
-                <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 text-[10px]">
-                  8 PHASES
+                <span className="command-badge bg-[#FF9933]/15 text-[#FFB057] border-[#FF9933]/40 text-[10px] font-bold">
+                  8 Stages
                 </span>
               </div>
-              <p className="font-mono text-[10.5px] text-[#A09D95] mt-0.5 truncate">
-                TARGET: {document.filename} · SIZE: {document.fileSize}
+              <p className="font-mono text-[11px] text-slate-400 mt-0.5 truncate">
+                Target: {document.filename} · Size: {document.fileSize}
               </p>
             </div>
           </div>
 
           <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 border-t sm:border-t-0 border-[#3A3D45]/40 pt-2 sm:pt-0 font-mono">
-            <div className="text-xs text-[#A09D95]">
-              PROGRESS: <span className="text-[#FAF7F0] font-bold">{activeStage} / {PIPELINE_STEPS.length}</span>
+            <div className="text-xs text-slate-400">
+              Progress: <span className="text-white font-bold">{activeStage} / {PIPELINE_STEPS.length}</span>
             </div>
-            <div className="text-[11px] text-[#8A6D1F] font-semibold">
-              {progressPercent}% COMPLETE
+            <div className="text-[11px] text-[#FF9933] font-semibold">
+              {progressPercent}% Complete
             </div>
           </div>
         </div>
 
         {/* Global Progress Track */}
-        <div className="h-1 w-full bg-[#1C1E22] border-b border-[#3A3D45]">
+        <div className="h-1.5 w-full bg-[#1C1E22] border-b border-[#3A3D45]">
           <div
-            className="h-full bg-[#8A6D1F] transition-all duration-300"
+            className="h-full bg-linear-to-r from-[#FF9933] to-[#138808] transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
         {/* Linear Terminal Pipeline Ticker */}
-        <div className="p-5 sm:p-6 space-y-2">
+        <div className="p-4 sm:p-6 space-y-2">
           {PIPELINE_STEPS.map((step, idx) => {
             const isDone = idx < activeStage;
             const isRunning = idx === activeStage && activeStage < PIPELINE_STEPS.length;
@@ -208,27 +209,27 @@ export default function Scan() {
 
             return (
               <div
-                key={step.code}
+                key={step.stageNumber}
                 className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border transition-colors font-mono text-xs ${
                   isRunning
-                    ? "border-[#8A6D1F] bg-[#8A6D1F]/10 text-[#FAF7F0]"
+                    ? "border-[#FF9933] bg-[#FF9933]/10 text-white"
                     : isDone
-                    ? "border-[#3A3D45] bg-[#1C1E22] text-[#D1CEC7]"
-                    : "border-[#3A3D45]/40 bg-[#1C1E22]/50 text-[#A09D95]/60"
+                    ? "border-[#3A3D45] bg-[#1C1E22] text-slate-200"
+                    : "border-[#3A3D45]/40 bg-[#1C1E22]/50 text-slate-500"
                 }`}
               >
                 {/* Left: Step indicator & Description */}
                 <div className="flex items-start sm:items-center gap-3 min-w-0">
-                  <span className={`text-[11px] shrink-0 ${isRunning ? "text-[#8A6D1F] font-bold" : isDone ? "text-[#22C55E]" : "text-[#A09D95]/50"}`}>
-                    [{String(idx + 1).padStart(2, "0")}/08]
+                  <span className={`text-[11px] shrink-0 font-bold ${isRunning ? "text-[#FF9933]" : isDone ? "text-[#138808]" : "text-slate-600"}`}>
+                    Stage {step.stageNumber}
                   </span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`font-bold tracking-wider ${isRunning ? "text-[#FAF7F0]" : isDone ? "text-[#FAF7F0]" : "text-[#A09D95]/70"}`}>
-                        {step.code}
+                      <span className={`font-semibold tracking-normal ${isRunning ? "text-white" : isDone ? "text-slate-200" : "text-slate-400"}`}>
+                        {step.name}
                       </span>
-                      <span className="text-[#3A3D45] hidden sm:inline">::</span>
-                      <span className="text-[11px] text-[#A09D95] truncate">
+                      <span className="text-[#3A3D45] hidden sm:inline">·</span>
+                      <span className="text-[11px] text-slate-400 truncate">
                         {step.detail}
                       </span>
                     </div>
@@ -237,23 +238,24 @@ export default function Scan() {
 
                 {/* Right: Subsystem & Status Chip */}
                 <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                  <span className="text-[10px] text-[#A09D95] uppercase tracking-widest hidden md:inline">
+                  <span className="text-[11px] text-slate-400 hidden md:inline">
                     {step.subsystem}
                   </span>
                   {isDone && (
-                    <span className="command-badge bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30">
-                      [DONE]
+                    <span className="command-badge command-badge-verified">
+                      <CheckCircle2 className="h-3 w-3 text-[#138808]" />
+                      Verified
                     </span>
                   )}
                   {isRunning && (
-                    <span className="command-badge bg-[#8A6D1F]/20 text-[#D1CEC7] border-[#8A6D1F] flex items-center gap-1.5 animate-pulse">
-                      <Loader2 className="h-3 w-3 animate-spin text-[#8A6D1F]" />
-                      [RUNNING]
+                    <span className="command-badge bg-[#FF9933]/20 text-[#FFB057] border-[#FF9933] flex items-center gap-1.5 animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin text-[#FF9933]" />
+                      Analyzing
                     </span>
                   )}
                   {isQueued && (
-                    <span className="command-badge bg-transparent text-[#A09D95]/50 border-[#3A3D45]">
-                      [QUEUED]
+                    <span className="command-badge bg-transparent text-slate-500 border-[#3A3D45]">
+                      Queued
                     </span>
                   )}
                 </div>
@@ -265,22 +267,29 @@ export default function Scan() {
         {/* Terminal Telemetry Log Box */}
         <div className="border-t border-[#3A3D45] bg-[#1C1E22] p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[10px] text-[#A09D95] uppercase tracking-widest">
-              Live Kernel Stream & Subsystem Stdout
+            <span className="font-mono text-[11px] text-slate-400 font-semibold uppercase">
+              Pipeline Execution Log
             </span>
-            <span className="font-mono text-[10px] text-[#22C55E]">
-              {activeStage >= PIPELINE_STEPS.length ? "COMPILATION_COMPLETE" : "SUBPROCESS_ACTIVE"}
+            <span className="font-mono text-[11px] text-[#138808] font-bold">
+              {activeStage >= PIPELINE_STEPS.length ? "Screening Completed" : "Engine Active"}
             </span>
           </div>
-          <div className="h-28 overflow-y-auto font-mono text-[11px] text-[#A09D95] space-y-1 bg-[#151719] p-3 border border-[#3A3D45]">
-            <p className="text-[#8A6D1F]">&gt; [CORE] Initializing secure forensic sandbox for reference {document.reference}...</p>
-            <p className="text-[#A09D95]">&gt; [STORAGE] Document byte stream verified (length: {document.fileSize}).</p>
-            {terminalLogs.map((log, idx) => (
-              <p key={idx} className="text-[#D1CEC7]">{log}</p>
+          <div className="h-28 overflow-y-auto font-mono text-[11px] text-slate-400 space-y-1 bg-[#151719] p-3 border border-[#3A3D45]">
+            <p className="text-[#FF9933]">&gt; Core: Initializing secure forensic sandbox for reference {document.reference}...</p>
+            <p className="text-slate-400">&gt; Storage: Document byte stream verified (length: {document.fileSize}).</p>
+            {PIPELINE_STEPS.slice(0, activeStage).map((step) => (
+              <p key={step.stageNumber} className="text-[#22C55E]">
+                &gt; {step.name}: Processed nominal ({step.detail})
+              </p>
             ))}
+            {activeStage < PIPELINE_STEPS.length && (
+              <p className="text-[#FF9933] animate-pulse">
+                &gt; {PIPELINE_STEPS[activeStage].name}: Executing inspection...
+              </p>
+            )}
             {activeStage >= PIPELINE_STEPS.length && (
               <p className="text-[#22C55E] font-bold">
-                &gt; [VERISCAN] All 8 forensic modules executed. Verdict synthesized. Transferring to audit dossier...
+                &gt; VeriScan: All 8 forensic modules executed. Verdict synthesized. Transferring to audit dossier...
               </p>
             )}
           </div>

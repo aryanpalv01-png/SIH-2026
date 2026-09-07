@@ -22,8 +22,8 @@ export function PageHeader({
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="min-w-0 max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#8A6D1F]" />
+            <span className="command-badge bg-[#FF9933]/15 text-[#FFB057] border-[#FF9933]/40 flex items-center gap-1.5 font-bold">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#FF9933]" />
               {categoryHindi ? `${categoryHindi} · ` : ""}
               {categoryEnglish}
             </span>

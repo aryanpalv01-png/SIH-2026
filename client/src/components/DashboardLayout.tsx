@@ -77,11 +77,11 @@ export default function DashboardLayout({
 
         <div className="flex flex-1 items-center justify-center px-4 py-12">
           <div className="w-full max-w-md terminal-panel p-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-[#8A6D1F] bg-[#1C1E22] text-[#8A6D1F]">
-              <AshokaChakra className="h-7 w-7 text-[#8A6D1F]" />
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-[#FF9933] bg-[#1C1E22] text-[#FF9933]">
+              <AshokaChakra className="h-7 w-7 text-[#FF9933]" />
             </div>
 
-            <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 font-bold">
+            <span className="command-badge bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/40 font-bold">
               🇮🇳 भारत सरकार · NATIONAL COMPLIANCE TERMINAL
             </span>
 
@@ -97,9 +97,9 @@ export default function DashboardLayout({
               <Button
                 onClick={() => (window.location.href = "/auth/login")}
                 size="lg"
-                className="w-full border border-[#8A6D1F] bg-[#8A6D1F] text-[#FAF7F0] hover:bg-[#8A6D1F]/85 font-mono font-bold text-xs h-10"
+                className="w-full border border-[#FF9933] bg-[#FF9933] text-slate-950 hover:bg-[#E68524] font-mono font-bold text-xs h-10"
               >
-                [SIGN_IN_WITH_EMAIL_OTP]
+                Sign In with Email OTP
               </Button>
             </div>
 
@@ -198,7 +198,7 @@ function DashboardLayoutContent({
               <div className="flex items-center gap-3 px-2">
                 <button
                   onClick={toggleSidebar}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:border-[#8A6D1F] hover:text-[#FAF7F0] focus:outline-none transition-colors"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#3A3D45] bg-[#26282D] text-[#D1CEC7] hover:border-[#FF9933] hover:text-[#FAF7F0] focus:outline-none transition-colors"
                   aria-label="Toggle navigation"
                 >
                   <PanelLeft className="h-4 w-4" />
@@ -209,7 +209,7 @@ function DashboardLayoutContent({
                       <p className="font-serif text-base font-bold tracking-tight text-[#FAF7F0]">
                         VeriScan
                       </p>
-                      <span className="command-badge bg-[#8A6D1F]/20 text-[#D1CEC7] border-[#8A6D1F]/50 text-[8px] font-bold">
+                      <span className="command-badge bg-[#FF9933]/20 text-[#FF9933] border-[#FF9933]/50 text-[8px] font-bold">
                         TERMINAL
                       </span>
                     </div>
@@ -223,7 +223,7 @@ function DashboardLayoutContent({
 
             <SidebarContent className="px-3 py-4 bg-[#1C1E22]">
               <p className="font-mono text-[9.5px] uppercase tracking-wider mb-2.5 px-2 text-[#A09D95] group-data-[collapsible=icon]:hidden">
-                TERMINAL_MODULES
+                Navigation
               </p>
               <SidebarMenu className="gap-1 font-mono">
                 {menuItems.map((item) => {
@@ -238,7 +238,7 @@ function DashboardLayoutContent({
                         tooltip={item.label}
                         className={`h-9 px-2.5 transition-all text-xs border ${
                           isActive
-                            ? "border-[#8A6D1F] bg-[#8A6D1F]/20 text-[#FAF7F0] font-bold"
+                            ? "border-[#FF9933] bg-[#FF9933]/20 text-[#FAF7F0] font-bold"
                             : "border-transparent text-[#A09D95] hover:bg-[#26282D] hover:text-[#FAF7F0] hover:border-[#3A3D45]"
                         }`}
                       >
@@ -255,10 +255,10 @@ function DashboardLayoutContent({
               {!isCollapsed && (
                 <div className="mt-auto px-2 pt-6">
                   <div className="border border-[#3A3D45] bg-[#26282D] p-3 font-mono text-xs">
-                    <div className="flex items-center gap-1.5 text-[#22C55E]">
+                    <div className="flex items-center gap-1.5 text-[#138808]">
                       <ShieldCheck className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
                       <span className="text-[11px] font-bold text-[#FAF7F0]">
-                        AUDIT_ISOLATION
+                        Audit Isolation
                       </span>
                     </div>
                     <p className="mt-1 text-[10px] leading-relaxed text-[#A09D95]">
@@ -273,8 +273,8 @@ function DashboardLayoutContent({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex w-full items-center gap-2.5 p-1.5 text-left border border-transparent hover:border-[#3A3D45] hover:bg-[#26282D] transition-colors focus:outline-none group-data-[collapsible=icon]:justify-center font-mono">
-                    <Avatar className="h-7 w-7 border border-[#8A6D1F]/50 bg-[#1C1E22]">
-                      <AvatarFallback className="bg-[#8A6D1F]/20 text-[10px] font-bold text-[#D1CEC7]">
+                    <Avatar className="h-7 w-7 border border-[#FF9933]/50 bg-[#1C1E22]">
+                      <AvatarFallback className="bg-[#FF9933]/20 text-[10px] font-bold text-[#FF9933]">
                         {getInitials(user?.name)}
                       </AvatarFallback>
                     </Avatar>
@@ -297,7 +297,7 @@ function DashboardLayoutContent({
                     <p className="truncate text-[10px] text-[#A09D95]">
                       {user?.email}
                     </p>
-                    <span className="mt-1 inline-block command-badge bg-[#8A6D1F]/20 text-[#D1CEC7] border-[#8A6D1F] text-[9px]">
+                    <span className="mt-1 inline-block command-badge bg-[#FF9933]/20 text-[#FF9933] border-[#FF9933] text-[9px]">
                       ROLE: {user?.role || "analyst"}
                     </span>
                   </div>
@@ -306,14 +306,14 @@ function DashboardLayoutContent({
                     className="cursor-pointer px-2 py-1.5 text-xs text-rose-400 hover:bg-[#1C1E22] focus:bg-[#1C1E22] focus:text-rose-300"
                   >
                     <LogOut className="mr-2 h-3.5 w-3.5" />
-                    <span>[SIGN_OUT]</span>
+                    <span>Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarFooter>
           </Sidebar>
           <div
-            className={`absolute right-0 top-0 z-50 h-full w-1 cursor-col-resize transition-colors hover:bg-[#8A6D1F] bg-[#3A3D45] ${
+            className={`absolute right-0 top-0 z-50 h-full w-1 cursor-col-resize transition-colors hover:bg-[#FF9933] bg-[#3A3D45] ${
               isCollapsed ? "hidden" : ""
             }`}
             onMouseDown={() => setIsResizing(true)}

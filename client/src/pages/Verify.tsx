@@ -122,7 +122,7 @@ export default function Verify() {
     <div className="mx-auto max-w-[1440px] space-y-5">
       <PageHeader
         categoryHindi="दस्तावेज़ सत्यापन"
-        categoryEnglish="INGESTION_GATEWAY // SPECIMEN_INTAKE"
+        categoryEnglish="INGESTION GATEWAY // SPECIMEN INTAKE"
         title="Institutional Document Forensic Screening"
         subtitle="Ingest an Indian citizen identity document or certificate for real-time multi-layered forensic inspection."
         accountBadge={user?.email ? `VAULT: ${user.email}` : undefined}
@@ -133,7 +133,7 @@ export default function Verify() {
               size="sm"
               className="h-8 gap-1.5 border-[#3A3D45] bg-[#1C1E22] text-[#D1CEC7] hover:bg-[#26282D] hover:text-[#FAF7F0] font-mono text-[11px]"
             >
-              <ArrowLeft className="h-3.5 w-3.5" /> [RETURN_TO_DASHBOARD]
+              <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
             </Button>
           </Link>
         }
@@ -144,26 +144,26 @@ export default function Verify() {
         <div className="space-y-4 font-mono text-xs">
           <div className="terminal-panel p-5">
             <div className="flex items-center gap-2 pb-3 border-b border-[#3A3D45]">
-              <Terminal className="h-4 w-4 text-[#8A6D1F]" />
+              <Terminal className="h-4 w-4 text-[#FF9933]" />
               <h2 className="text-[10.5px] font-bold uppercase tracking-wider text-[#FAF7F0]">
-                INSPECTION_PROTOCOLS // AIR_GAPPED
+                Air-Gapped Inspection Protocols
               </h2>
             </div>
 
             <div className="mt-4 space-y-3.5">
               <InfoRow
-                icon={<ShieldCheck className="h-4 w-4 text-[#22C55E]" />}
-                title="ACCOUNT_SCOPED_VAULT"
+                icon={<ShieldCheck className="h-4 w-4 text-[#138808]" />}
+                title="Account-Scoped Vault"
                 body={`Screened payloads and cryptographic digests are strictly isolated to ${user?.email || "active account session"}.`}
               />
               <InfoRow
-                icon={<LockKeyhole className="h-4 w-4 text-[#8A6D1F]" />}
-                title="VOLATILE_MEMORY_SANDBOX"
+                icon={<LockKeyhole className="h-4 w-4 text-[#FF9933]" />}
+                title="Volatile Memory Sandbox"
                 body="Processed in volatile memory buffer with immediate GC cycle discarding payload bytes post-compilation."
               />
               <InfoRow
-                icon={<Building2 className="h-4 w-4 text-[#D1CEC7]" />}
-                title="DPI_CALIBRATED_PIPELINE"
+                icon={<Building2 className="h-4 w-4 text-[#FAF7F0]" />}
+                title="DPI-Calibrated Forensic Pipeline"
                 body="Deterministic Verhoeff math, 2048-bit UIDAI QR signatures, and Income Tax structural regex."
               />
             </div>
@@ -171,7 +171,7 @@ export default function Verify() {
 
           <div className="terminal-panel p-4 border border-[#3A3D45] bg-[#1C1E22]">
             <p className="font-bold text-[#FAF7F0] mb-1 text-[11px]">
-              EXAMINER_GUIDELINE:
+              Examiner Guidance:
             </p>
             <p className="text-[10.5px] text-[#A09D95] leading-relaxed font-sans">
               Ensure the entire document border is visible with sufficient contrast. Native PDF soft-copies automatically bypass sensor-grain noise tests to prevent false compression penalties.
@@ -183,15 +183,15 @@ export default function Verify() {
         <div className="terminal-panel p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between border-b border-[#3A3D45] pb-3">
             <div>
-              <span className="command-badge bg-[#8A6D1F]/15 text-[#D1CEC7] border-[#8A6D1F]/40 font-mono text-[10px]">
-                INTAKE_CHANNEL
+              <span className="command-badge bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/40 font-mono text-[10px]">
+                Intake Gateway
               </span>
               <h3 className="font-serif text-lg font-bold text-[#FAF7F0] mt-1">
                 Upload Target Specimen
               </h3>
             </div>
-            <span className="command-badge bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30 font-mono text-[10px]">
-              [ENCRYPTED_STREAM]
+            <span className="command-badge bg-[#138808]/15 text-[#22C55E] border-[#138808]/40 font-mono text-[10px]">
+              Encrypted Stream
             </span>
           </div>
 
@@ -202,19 +202,19 @@ export default function Verify() {
               className="mt-3 border border-rose-500/50 bg-rose-950/30 p-2.5 font-mono text-xs text-rose-300"
               role="alert"
             >
-              [ERROR] :: {uploadError}
+              Error: {uploadError}
             </p>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-2.5 font-mono text-xs">
             <FormatCard
-              icon={<FileText className="h-3.5 w-3.5 text-[#8A6D1F]" />}
-              label="DIGITAL_PDF"
+              icon={<FileText className="h-3.5 w-3.5 text-[#FF9933]" />}
+              label="Digital PDF"
               detail="e-Aadhaar / e-PAN Softcopy"
             />
             <FormatCard
-              icon={<FileImage className="h-3.5 w-3.5 text-[#22C55E]" />}
-              label="RASTER_IMAGE"
+              icon={<FileImage className="h-3.5 w-3.5 text-[#138808]" />}
+              label="Raster Image"
               detail="JPG, PNG, WebP (≤15MB)"
             />
           </div>

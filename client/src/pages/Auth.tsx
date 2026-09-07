@@ -364,7 +364,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-b from-[#1C2028] via-[#242A35] to-[#2D3340] text-[#FAF7F0] font-sans antialiased selection:bg-[#8A6D1F] selection:text-[#FAF7F0]">
+    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-b from-[#1C2028] via-[#242A35] to-[#2D3340] text-[#FAF7F0] font-sans antialiased selection:bg-[#FF9933] selection:text-[#FAF7F0]">
       {/* Top minimal institutional bar */}
       <header className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5">
         <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
@@ -393,8 +393,8 @@ export function Auth({ params }: { params?: { mode?: string } }) {
         <div className="w-full max-w-[460px] rounded-[12px] bg-[#FAF7F0] p-5 sm:p-8 md:p-9 shadow-2xl shadow-black/50 border border-white/20 text-[#2A2C30] transition-all">
           {/* Brand Header */}
           <div className="text-center">
-            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-[8px] bg-[#8A6D1F]/15 text-[#8A6D1F]">
-              <ShieldCheck className="h-6 w-6 text-[#8A6D1F]" />
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-[8px] bg-[#FF9933]/15 text-[#FF9933]">
+              <ShieldCheck className="h-6 w-6 text-[#FF9933]" />
             </div>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#2A2C30]">
               {mainMode === "register" ? "Create an Account" : "Sign in to VeriScan"}
@@ -499,7 +499,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   htmlFor="regName"
                   className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-1.5 flex items-center gap-1.5"
                 >
-                  <User className="h-3.5 w-3.5 text-[#8A6D1F]" /> Full Name & Title
+                  <User className="h-3.5 w-3.5 text-[#FF9933]" /> Full Name & Title
                 </label>
                 <input
                   id="regName"
@@ -509,7 +509,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   placeholder="Officer Rajesh Kumar"
-                  className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F] transition-all"
+                  className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933] transition-all"
                 />
               </div>
 
@@ -518,7 +518,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   htmlFor="regEmail"
                   className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-1.5 flex items-center gap-1.5"
                 >
-                  <Mail className="h-3.5 w-3.5 text-[#8A6D1F]" /> Official / Agency Email
+                  <Mail className="h-3.5 w-3.5 text-[#FF9933]" /> Official / Agency Email
                 </label>
                 <input
                   id="regEmail"
@@ -528,7 +528,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="officer@agency.gov.in"
-                  className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F] transition-all"
+                  className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933] transition-all"
                 />
               </div>
 
@@ -537,7 +537,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   htmlFor="regPassword"
                   className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-1.5 flex items-center gap-1.5"
                 >
-                  <LockKeyhole className="h-3.5 w-3.5 text-[#8A6D1F]" /> Password (Min 6 Chars)
+                  <LockKeyhole className="h-3.5 w-3.5 text-[#FF9933]" /> Password (Min 6 Chars)
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -549,7 +549,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full h-11 pl-3.5 pr-10 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F] transition-all"
+                    className="w-full h-11 pl-3.5 pr-10 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933] transition-all"
                   />
                   <button
                     type="button"
@@ -567,7 +567,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   htmlFor="regConfirmPassword"
                   className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-1.5 flex items-center gap-1.5"
                 >
-                  <LockKeyhole className="h-3.5 w-3.5 text-[#8A6D1F]" /> Confirm Password
+                  <LockKeyhole className="h-3.5 w-3.5 text-[#FF9933]" /> Confirm Password
                 </label>
                 <input
                   id="regConfirmPassword"
@@ -580,7 +580,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   className={`w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none transition-all ${
                     regConfirmPassword && regPassword !== regConfirmPassword
                       ? "border-[#A23E3E] focus:border-[#A23E3E] focus:ring-1 focus:ring-[#A23E3E]"
-                      : "border-[#2A2C30]/20 focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F]"
+                      : "border-[#2A2C30]/20 focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933]"
                   }`}
                 />
                 {regConfirmPassword && regPassword !== regConfirmPassword && (
@@ -592,7 +592,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                 <button
                   type="submit"
                   disabled={isLoading || !regName.trim() || !regEmail.trim() || !regPassword || regPassword !== regConfirmPassword}
-                  className="w-full h-11 sm:h-12 rounded-[8px] bg-[#8A6D1F] hover:bg-[#B08D2E] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full h-11 sm:h-12 rounded-[8px] bg-[#FF9933] hover:bg-[#E68524] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isLoading ? (
                     <>
@@ -613,7 +613,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                 <button
                   type="button"
                   onClick={() => handleSwitchMainMode("login")}
-                  className="font-bold text-[#8A6D1F] hover:underline cursor-pointer"
+                  className="font-bold text-[#FF9933] hover:underline cursor-pointer"
                 >
                   Sign in to your account
                 </button>
@@ -642,7 +642,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                   setLoginEmail(regEmail);
                   setRegistrationSuccess(false);
                 }}
-                className="w-full h-11 rounded-[8px] bg-[#8A6D1F] hover:bg-[#B08D2E] text-[#FAF7F0] font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full h-11 rounded-[8px] bg-[#FF9933] hover:bg-[#E68524] text-[#FAF7F0] font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 <LogIn className="h-4 w-4" />
                 <span>Proceed to Sign In</span>
@@ -663,7 +663,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                       htmlFor="loginEmail"
                       className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-1.5 flex items-center gap-1.5"
                     >
-                      <Mail className="h-3.5 w-3.5 text-[#8A6D1F]" /> Official Email Address
+                      <Mail className="h-3.5 w-3.5 text-[#FF9933]" /> Official Email Address
                     </label>
                     <input
                       id="loginEmail"
@@ -674,7 +674,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="investigator@agency.gov.in"
-                      className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F] transition-all"
+                      className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933] transition-all"
                     />
                   </div>
 
@@ -684,7 +684,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                         htmlFor="loginPassword"
                         className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] flex items-center gap-1.5"
                       >
-                        <LockKeyhole className="h-3.5 w-3.5 text-[#8A6D1F]" /> Password
+                        <LockKeyhole className="h-3.5 w-3.5 text-[#FF9933]" /> Password
                       </label>
                       <button
                         type="button"
@@ -692,7 +692,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                           setLoginMethod("email_otp");
                           setError(null);
                         }}
-                        className="text-[11px] font-semibold text-[#8A6D1F] hover:underline cursor-pointer"
+                        className="text-[11px] font-semibold text-[#FF9933] hover:underline cursor-pointer"
                       >
                         Forgot / Use OTP
                       </button>
@@ -706,7 +706,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         placeholder="••••••••••••"
-                        className="w-full h-11 pl-3.5 pr-10 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F] transition-all"
+                        className="w-full h-11 pl-3.5 pr-10 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933] transition-all"
                       />
                       <button
                         type="button"
@@ -723,7 +723,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                     <button
                       type="submit"
                       disabled={isLoading || !loginEmail.trim() || !loginPassword}
-                      className="w-full h-11 sm:h-12 rounded-[8px] bg-[#8A6D1F] hover:bg-[#B08D2E] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                      className="w-full h-11 sm:h-12 rounded-[8px] bg-[#FF9933] hover:bg-[#E68524] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {isLoading ? (
                         <>
@@ -744,7 +744,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                     <button
                       type="button"
                       onClick={() => handleSwitchMainMode("register")}
-                      className="font-bold text-[#8A6D1F] hover:underline cursor-pointer"
+                      className="font-bold text-[#FF9933] hover:underline cursor-pointer"
                     >
                       Register here
                     </button>
@@ -760,7 +760,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                       htmlFor="emailOtpInput"
                       className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-1.5 flex items-center gap-1.5"
                     >
-                      <Mail className="h-3.5 w-3.5 text-[#8A6D1F]" /> Official Email Address
+                      <Mail className="h-3.5 w-3.5 text-[#FF9933]" /> Official Email Address
                     </label>
                     <input
                       id="emailOtpInput"
@@ -771,7 +771,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="investigator@agency.gov.in"
-                      className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F] transition-all"
+                      className="w-full h-11 px-3.5 py-2 text-sm sm:text-base text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/40 focus:outline-none focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933] transition-all"
                     />
                   </div>
 
@@ -779,7 +779,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                     <button
                       type="submit"
                       disabled={isLoading || !loginEmail.trim()}
-                      className="w-full h-11 sm:h-12 rounded-[8px] bg-[#8A6D1F] hover:bg-[#B08D2E] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                      className="w-full h-11 sm:h-12 rounded-[8px] bg-[#FF9933] hover:bg-[#E68524] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {isLoading ? (
                         <>
@@ -809,7 +809,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                       className="block text-xs font-semibold uppercase tracking-wider text-[#2A2C30] mb-2 flex items-center justify-between"
                     >
                       <span className="flex items-center gap-1.5">
-                        <LockKeyhole className="h-3.5 w-3.5 text-[#8A6D1F]" /> 6-Digit Passcode
+                        <LockKeyhole className="h-3.5 w-3.5 text-[#FF9933]" /> 6-Digit Passcode
                       </span>
                       <span className="font-normal lowercase text-[11px] text-[#2A2C30]/60">
                         {loginEmail}
@@ -827,14 +827,14 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       placeholder="••••••"
                       autoComplete="one-time-code"
-                      className="w-full h-12 px-3 py-2 text-center font-mono text-xl sm:text-2xl tracking-[0.25em] sm:tracking-[0.4em] font-bold text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/30 focus:outline-none focus:border-[#8A6D1F] focus:ring-1 focus:ring-[#8A6D1F] transition-all"
+                      className="w-full h-12 px-3 py-2 text-center font-mono text-xl sm:text-2xl tracking-[0.25em] sm:tracking-[0.4em] font-bold text-[#2A2C30] bg-white border border-[#2A2C30]/20 rounded-[8px] placeholder-[#2A2C30]/30 focus:outline-none focus:border-[#FF9933] focus:ring-1 focus:ring-[#FF9933] transition-all"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isLoading || otp.trim().length !== 6}
-                    className="w-full h-11 sm:h-12 rounded-[8px] bg-[#8A6D1F] hover:bg-[#B08D2E] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                    className="w-full h-11 sm:h-12 rounded-[8px] bg-[#FF9933] hover:bg-[#E68524] text-[#FAF7F0] font-bold text-sm sm:text-base transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isLoading ? (
                       <>
@@ -855,7 +855,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                         setError(null);
                         setSuccessMessage(null);
                       }}
-                      className="inline-flex items-center gap-1 font-medium hover:text-[#8A6D1F] transition-colors cursor-pointer py-1"
+                      className="inline-flex items-center gap-1 font-medium hover:text-[#FF9933] transition-colors cursor-pointer py-1"
                     >
                       <ArrowLeft className="h-3 w-3" /> Back
                     </button>
@@ -864,7 +864,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                       type="button"
                       disabled={isLoading}
                       onClick={() => handleSendEmailOtp()}
-                      className="font-medium text-[#8A6D1F] hover:text-[#B08D2E] transition-colors cursor-pointer py-1"
+                      className="font-medium text-[#FF9933] hover:text-[#E68524] transition-colors cursor-pointer py-1"
                     >
                       Resend Passcode
                     </button>
@@ -877,7 +877,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                 <div className="mt-5 pt-4 border-t border-[#2A2C30]/10">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#2A2C30]/70 flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-[#8A6D1F]" />
+                      <Sparkles className="h-3.5 w-3.5 text-[#FF9933]" />
                       Instant Demo Evaluation
                     </span>
                     <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 border border-emerald-200">
@@ -893,7 +893,7 @@ export function Auth({ params }: { params?: { mode?: string } }) {
                     disabled={isLoading}
                     className="w-full min-h-[40px] py-2 px-3 rounded-[8px] bg-[#2A2C30] hover:bg-[#3A3D42] text-[#FAF7F0] font-semibold text-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 text-center"
                   >
-                    <Building2 className="h-3.5 w-3.5 text-[#8A6D1F] shrink-0" />
+                    <Building2 className="h-3.5 w-3.5 text-[#FF9933] shrink-0" />
                     <span className="truncate">Enter as Senior Forensic Examiner (Demo)</span>
                   </button>
                 </div>
